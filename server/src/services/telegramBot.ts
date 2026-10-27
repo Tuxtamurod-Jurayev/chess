@@ -55,7 +55,7 @@ export class TelegramBotService {
       await this.apiCall('setMyCommands', {
         commands: [
           { command: 'start', description: '🎮 O‘yinlar portalini ochish' },
-          { command: 'games', description: '🕹️ 9 ta o‘yinlar ro‘yxati' },
+          { command: 'games', description: '🕹️ 8 ta o‘yinlar ro‘yxati' },
           { command: 'help', description: 'ℹ️ Qo‘llanma va yordam' },
         ],
       });
@@ -178,16 +178,15 @@ export class TelegramBotService {
   private async sendGamesList(chatId: number) {
     const webAppUrl = this.getAppUrl();
 
-    const message = `🕹️ <b>Platformadagi 9 ta o‘yin ro‘yxati:</b>\n\n` +
+    const message = `🕹️ <b>Platformadagi 8 ta o‘yin ro‘yxati:</b>\n\n` +
       `1. ♟️ <b>Shaxmat (Chess):</b> 1v1 PvP yoki Minimax AI (Easy/Medium/Hard)\n` +
       `2. ⚪ <b>Shashka (Checkers):</b> Damkaga chiqish, orqaga urish qoidalari\n` +
       `3. 🎯 <b>Knife Hit:</b> Har bir bosqichda pichoq va nishon diski o‘zgaruvchi arkada\n` +
       `4. 🌲 <b>Timberjack:</b> Reaksiya tezligi va daraxt kesish\n` +
       `5. 🔢 <b>2048:</b> Plitkalarni surib 2048 soniga erishish\n` +
-      `6. 🐍 <b>Snake:</b> Ozuqa yeb eng uzun ilon bo‘lish\n` +
-      `7. ❌ <b>Tic-Tac-Toe:</b> Krestiki-noliki tezkor partiyalari\n` +
-      `8. 🏗️ <b>Tower Blocks:</b> Gorizontal harakatlanuvchi bloklardan minora qurish\n` +
-      `9. ➕ <b>Math Battle:</b> Matematik misollarni vaqtga qarshi yechish\n\n` +
+      `6. ❌ <b>Tic-Tac-Toe:</b> Krestiki-noliki tezkor partiyalari\n` +
+      `7. 🏗️ <b>Tower Blocks:</b> Osmondo‘par binolar qurish\n` +
+      `8. ➕ <b>Math Battle:</b> Matematik misollarni yechish bellashuvi\n\n` +
       `👇 <i>Istalgan birini darhol o‘ynash uchun:</i>`;
 
     const replyMarkup = {

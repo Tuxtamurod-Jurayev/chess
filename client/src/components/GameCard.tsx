@@ -68,25 +68,11 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
           {getIcon()}
         </div>
 
-        {/* Clean Info (No cut-off description or subtitle tags) */}
+        {/* Clean Info - Only Title */}
         <div className="min-w-0">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-sm font-bold text-white tracking-tight truncate group-hover:text-zinc-100">
-              {game.titleUz}
-            </h3>
-            {game.badge && (
-              <span
-                className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-xs"
-                style={{
-                  backgroundColor: `${game.accentColor}18`,
-                  color: game.accentColor,
-                  borderColor: `${game.accentColor}40`,
-                }}
-              >
-                {game.badge}
-              </span>
-            )}
-          </div>
+          <h3 className="text-sm font-bold text-white tracking-tight truncate group-hover:text-zinc-100">
+            {game.titleUz}
+          </h3>
         </div>
       </div>
 

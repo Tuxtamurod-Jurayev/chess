@@ -92,21 +92,6 @@ export const ALL_GAMES: GameMetadata[] = [
     accentColor: '#ec4899', // pink
   },
   {
-    id: 'snake',
-    title: 'Snake',
-    titleUz: 'Klassik Iloncha',
-    category: 'arcade',
-    descriptionUz: 'Afsonaviy iloncha o‘yini. Ozuqalarni yeb eng uzun ilonga aylaning.',
-    icon: 'Activity',
-    badge: 'Retro',
-    isMultiplayer: false,
-    minPlayers: 1,
-    maxPlayers: 1,
-    avgDuration: '2-5 daq',
-    difficulty: 'Oson',
-    accentColor: '#22c55e', // emerald
-  },
-  {
     id: 'knife-hit',
     title: 'Knife Hit',
     titleUz: 'Pichoq Uloqtirish',

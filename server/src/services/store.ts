@@ -6,7 +6,8 @@ class InMemoryStore {
   private gameLeaderboards: Map<GameId, LeaderboardItem[]> = new Map();
 
   constructor() {
-    this.seedMockLeaderboards();
+    // Real, active player leaderboards (mock bot entries removed)
+    this.gameLeaderboards = new Map();
   }
 
   public getOrCreateUser(tgData: { id: number; first_name: string; username?: string; photo_url?: string }): UserProfile {
@@ -28,7 +29,6 @@ class InMemoryStore {
       'timberjack': 1000,
       '2048': 1000,
       'tictactoe': 1200,
-      'snake': 1000,
       'knife-hit': 1000,
       'tower-blocks': 1000,
     };
@@ -43,6 +43,7 @@ class InMemoryStore {
       dailyStreak: 1,
       lastDailyClaim: new Date(Date.now() - 25 * 3600 * 1000).toISOString(), // Kechagi kun
       eloRating: defaultElo,
+      highScores: {},
       totalMatches: 0,
       totalWins: 0,
     };
@@ -109,7 +110,10 @@ class InMemoryStore {
 
     // Solo game highscore update
     if (!p2Id && score !== undefined) {
-      this.updateLeaderboard(gameId, p1, score);
+      if (!p1.highScores) p1.highScores = {};
+      const peakScore = Math.max(p1.highScores[gameId] || 0, score);
+      p1.highScores[gameId] = peakScore;
+      this.updateLeaderboard(gameId, p1, peakScore);
       return;
     }
 
@@ -142,8 +146,13 @@ class InMemoryStore {
     }
 
     p1.eloRating[gameId] = Math.max(100, Math.round(r1 + K * (s1 - e1)));
+    if (!p1.highScores) p1.highScores = {};
+    p1.highScores[gameId] = Math.max(p1.highScores[gameId] || 0, p1.eloRating[gameId]);
+
     if (p2) {
       p2.eloRating[gameId] = Math.max(100, Math.round(r2 + K * (s2 - e2)));
+      if (!p2.highScores) p2.highScores = {};
+      p2.highScores[gameId] = Math.max(p2.highScores[gameId] || 0, p2.eloRating[gameId]);
       this.updateLeaderboard(gameId, p2, p2.eloRating[gameId], true);
     }
     this.updateLeaderboard(gameId, p1, p1.eloRating[gameId], true);
@@ -158,9 +167,11 @@ class InMemoryStore {
 
     const existingIdx = board.findIndex((item) => item.userId === user.id);
     if (existingIdx >= 0) {
-      if (isElo || score > board[existingIdx].score) {
+      if (isElo) {
         board[existingIdx].score = score;
-        if (isElo) board[existingIdx].elo = score;
+        board[existingIdx].elo = score;
+      } else if (score > board[existingIdx].score) {
+        board[existingIdx].score = score;
       }
     } else {
       board.push({
@@ -174,11 +185,15 @@ class InMemoryStore {
       });
     }
 
-    // Sort descending
+    // Sort descending by highest score
     board.sort((a, b) => b.score - a.score);
     // Assign ranks
     board.forEach((item, idx) => {
       item.rank = idx + 1;
+      if (idx === 0) item.badge = '👑 1-O‘rin';
+      else if (idx === 1) item.badge = '🥈 2-O‘rin';
+      else if (idx === 2) item.badge = '🥉 3-O‘rin';
+      else item.badge = undefined;
     });
 
     // Keep top 100
@@ -187,30 +202,6 @@ class InMemoryStore {
 
   public getLeaderboard(gameId: GameId): LeaderboardItem[] {
     return this.gameLeaderboards.get(gameId) || [];
-  }
-
-  private seedMockLeaderboards() {
-    const mockUsers = [
-      { id: 'usr_bot1', username: 'ChessMaster_UZ', firstName: 'Jasur', score: 1850 },
-      { id: 'usr_bot2', username: 'Sherdor_Grand', firstName: 'Sherzod', score: 1720 },
-      { id: 'usr_bot3', username: 'Samarkand_Knight', firstName: 'Azizbek', score: 1610 },
-      { id: 'usr_bot4', username: 'Tashkent_Tactics', firstName: 'Madina', score: 1540 },
-      { id: 'usr_bot5', username: 'Bukhara_King', firstName: 'Dilshod', score: 1480 },
-    ];
-
-    const games: GameId[] = ['chess', 'checkers', 'math-battle', '2048', 'timberjack', 'snake', 'tictactoe', 'knife-hit', 'tower-blocks'];
-    for (const g of games) {
-      const items: LeaderboardItem[] = mockUsers.map((u, i) => ({
-        rank: i + 1,
-        userId: u.id,
-        username: u.username,
-        firstName: u.firstName,
-        score: g === '2048' ? (10 - i) * 2048 : (g === 'timberjack' ? 180 - i * 20 : u.score - i * 40),
-        elo: u.score - i * 40,
-        badge: i === 0 ? '👑 Grandmaster' : (i < 3 ? '⭐ Pro' : undefined),
-      }));
-      this.gameLeaderboards.set(g, items);
-    }
   }
 }
 

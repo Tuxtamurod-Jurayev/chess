@@ -56,11 +56,13 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     const interval = setInterval(() => {
       setTimeLeft((t) => {
-        if (t <= 2) {
+        if (t <= 1) {
           handleAnswer(null);
           return 100;
         }
-        return t - 2.5;
+        // Much longer, comfortable thinking time (7-8 seconds)
+        const drain = 0.65 + Math.min(0.35, combo * 0.06);
+        return t - drain;
       });
     }, 50);
 

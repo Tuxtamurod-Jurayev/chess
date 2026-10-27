@@ -5,7 +5,6 @@ export type GameId =
   | 'timberjack'
   | '2048'
   | 'tictactoe'
-  | 'snake'
   | 'knife-hit'
   | 'tower-blocks';
 
@@ -37,6 +36,7 @@ export interface UserProfile {
   dailyStreak: number;
   lastDailyClaim?: string;
   eloRating: Record<GameId, number>;
+  highScores?: Partial<Record<GameId, number>>;
   totalMatches: number;
   totalWins: number;
 }

@@ -379,7 +379,6 @@ export class RoomManager {
         'timberjack': 1000,
         '2048': 1000,
         'tictactoe': 1300,
-        'snake': 1000,
         'knife-hit': 1000,
         'tower-blocks': 1000,
       },

@@ -44,11 +44,12 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     const interval = setInterval(() => {
       setTimeLeft((t) => {
-        if (t <= 1) {
+        if (t <= 0.5) {
           handleGameOver();
           return 0;
         }
-        return t - 1.2;
+        // Much longer, comfortable time decay (11+ seconds)
+        return t - 0.45;
       });
     }, 50);
 
@@ -87,7 +88,7 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     setTree(newTree);
     setScore((s) => s + 1);
-    setTimeLeft((t) => Math.min(100, t + 4.5));
+    setTimeLeft((t) => Math.min(100, t + 6.5));
   };
 
   const handleGameOver = () => {
