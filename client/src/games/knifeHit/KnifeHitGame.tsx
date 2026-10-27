@@ -19,6 +19,8 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     targetKnives: [] as number[],
     flyingKnife: null as { y: number } | null,
     gameOver: false,
+    recoil: 0,
+    particles: [] as Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }>,
   });
 
   useEffect(() => {
@@ -40,9 +42,14 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         state.rotation += state.speed;
       }
 
+      if (state.recoil > 0) {
+        state.recoil *= 0.85;
+        if (state.recoil < 0.2) state.recoil = 0;
+      }
+
       // Draw Rotating Minimal Disc
       ctx.save();
-      ctx.translate(centerX, centerY);
+      ctx.translate(centerX, centerY - state.recoil);
       ctx.rotate(state.rotation);
 
       // Disc body
@@ -108,6 +115,20 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             tg.haptic('light');
             state.targetKnives.push(currentRelAngle);
             state.flyingKnife = null;
+            state.recoil = 5;
+
+            // Spawn particles
+            for (let i = 0; i < 8; i++) {
+              state.particles.push({
+                x: centerX,
+                y: centerY + radius,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.7) * 5,
+                life: 1,
+                color: Math.random() > 0.5 ? '#f4f4f5' : '#71717a',
+              });
+            }
+
             setScore((s) => s + 1);
 
             setKnivesLeft((k) => {
@@ -122,6 +143,25 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               return remaining;
             });
           }
+        }
+      }
+
+      // Render & update particles
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.2; // gravity
+        p.life -= 0.05;
+
+        if (p.life <= 0) {
+          state.particles.splice(i, 1);
+        } else {
+          ctx.save();
+          ctx.globalAlpha = p.life;
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, 2.5, 2.5);
+          ctx.restore();
         }
       }
 
@@ -157,6 +197,8 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       targetKnives: [],
       flyingKnife: null,
       gameOver: false,
+      recoil: 0,
+      particles: [],
     };
     setKnivesLeft(7);
     setScore(0);

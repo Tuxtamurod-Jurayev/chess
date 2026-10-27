@@ -12,8 +12,10 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [board, setBoard] = useState<Board>(() => getInitialBoard());
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
+  const [addedScoreInfo, setAddedScoreInfo] = useState<{ amount: number; id: number } | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
+  const [spawnedKey, setSpawnedKey] = useState<string | null>(null);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -34,6 +36,7 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (emptyCells.length === 0) return false;
     const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
     b[randomCell.r][randomCell.c] = Math.random() < 0.9 ? 2 : 4;
+    setSpawnedKey(`${randomCell.r}-${randomCell.c}`);
     return true;
   }
 
@@ -102,6 +105,9 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       setBoard(b);
       const newScore = score + totalScore;
       setScore(newScore);
+      if (totalScore > 0) {
+        setAddedScoreInfo({ amount: totalScore, id: Date.now() });
+      }
       if (newScore > bestScore) setBestScore(newScore);
 
       if (!won && b.some((row) => row.some((c) => c === 2048))) {
@@ -209,9 +215,17 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
         {/* Score Bar */}
         <div className="flex items-center space-x-2 mb-3">
-          <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl p-2.5 text-center">
+          <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl p-2.5 text-center relative overflow-hidden">
             <span className="text-[10px] uppercase font-mono text-zinc-500 block">Ochko</span>
             <span className="text-sm font-bold font-mono text-zinc-200">{score}</span>
+            {addedScoreInfo && (
+              <span
+                key={addedScoreInfo.id}
+                className="absolute top-1 right-2 text-xs font-mono font-bold text-amber-400 animate-float pointer-events-none"
+              >
+                +{addedScoreInfo.amount}
+              </span>
+            )}
           </div>
           <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl p-2.5 text-center">
             <span className="text-[10px] uppercase font-mono text-zinc-500 block">Eng Yuqori</span>
@@ -223,18 +237,25 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <div className="relative aspect-square w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl p-2.5 shadow-md flex flex-col justify-between">
           <div className="grid grid-cols-4 grid-rows-4 gap-2 w-full h-full">
             {board.map((row, r) =>
-              row.map((val, c) => (
-                <div
-                  key={`${r}-${c}`}
-                  className={`rounded-xl flex items-center justify-center font-mono transition-transform duration-75 ${getTileStyle(val)}`}
-                >
-                  {val !== 0 && (
-                    <span className={`text-base ${val > 512 ? 'text-xs' : val > 64 ? 'text-sm' : 'text-base'}`}>
-                      {val}
-                    </span>
-                  )}
-                </div>
-              ))
+              row.map((val, c) => {
+                const cellKey = `${r}-${c}`;
+                const isJustSpawned = spawnedKey === cellKey && val !== 0;
+
+                return (
+                  <div
+                    key={cellKey}
+                    className={`rounded-xl flex items-center justify-center font-mono transition-all duration-150 ${getTileStyle(val)} ${
+                      isJustSpawned ? 'animate-spawn' : ''
+                    }`}
+                  >
+                    {val !== 0 && (
+                      <span className={`text-base ${val > 512 ? 'text-xs' : val > 64 ? 'text-sm' : 'text-base'}`}>
+                        {val}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
 

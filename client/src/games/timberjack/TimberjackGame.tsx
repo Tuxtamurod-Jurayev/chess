@@ -19,6 +19,8 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
   const [timeLeft, setTimeLeft] = useState(100);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
+  const [isChopping, setIsChopping] = useState(false);
+  const [flyingWood, setFlyingWood] = useState<{ id: number; side: 'left' | 'right' } | null>(null);
 
   function generateInitialTree(): TreeSegment[] {
     const segments: TreeSegment[] = [];
@@ -59,6 +61,11 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     tg.haptic('light');
     setPlayerSide(side);
+    setIsChopping(true);
+    setTimeout(() => setIsChopping(false), 160);
+
+    // Wood chip flies away to the opposite side
+    setFlyingWood({ id: Date.now(), side: side === 'left' ? 'right' : 'left' });
 
     const bottomBranch = tree[0]?.branch;
     if (bottomBranch === side) {
@@ -145,16 +152,26 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
             ))}
           </div>
 
-          {/* Minimal Woodcutter */}
+          {/* Minimal Woodcutter with Chop Swing */}
           <div
             className={`absolute bottom-6 transition-all duration-75 ${
               playerSide === 'left' ? 'left-10' : 'right-10'
-            }`}
+            } ${isChopping ? 'animate-chop' : ''}`}
           >
             <div className="w-9 h-11 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-xs shadow-xs">
               🪓
             </div>
           </div>
+
+          {/* Flying Wood Chip Particle */}
+          {flyingWood && (
+            <div
+              key={flyingWood.id}
+              className={`absolute bottom-10 w-4 h-3 bg-zinc-600 rounded-xs ${
+                flyingWood.side === 'left' ? 'left-16 animate-fly-left' : 'right-16 animate-fly-right'
+              }`}
+            />
+          )}
 
           {gameOver && (
             <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">

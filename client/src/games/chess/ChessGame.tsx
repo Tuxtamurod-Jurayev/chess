@@ -342,45 +342,51 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                   const isSelected = selectedSquare === square;
                   const isValidTarget = validMoves.includes(square);
                   const isCheck = chess.inCheck() && piece?.type === 'k' && piece?.color === chess.turn();
+                  const lastMove = chess.history({ verbose: true }).slice(-1)[0];
+                  const isLastMove = lastMove && (lastMove.from === square || lastMove.to === square);
 
                   return (
                     <div
                       key={square}
                       onClick={() => handleSquareClick(square)}
-                      className={`relative flex items-center justify-center cursor-pointer transition-colors ${
+                      className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${
                         isDark ? 'bg-[#27272a]' : 'bg-[#3f3f46]'
-                      } ${isSelected ? '!bg-zinc-500/80' : ''} ${
-                        isCheck ? '!bg-rose-900/60' : ''
+                      } ${isLastMove ? '!bg-zinc-600/60' : ''} ${isSelected ? '!bg-zinc-500' : ''} ${
+                        isCheck ? '!bg-rose-900/70 animate-pulse' : ''
                       }`}
                     >
                       {/* Subdued Rank/File labels */}
                       {fIdx === 0 && (
-                        <span className="absolute top-0.5 left-1 text-[8px] font-mono opacity-30 pointer-events-none">
+                        <span className="absolute top-0.5 left-1 text-[8px] font-mono opacity-30 pointer-events-none select-none">
                           {rank}
                         </span>
                       )}
                       {rIdx === 7 && (
-                        <span className="absolute bottom-0.5 right-1 text-[8px] font-mono opacity-30 pointer-events-none">
+                        <span className="absolute bottom-0.5 right-1 text-[8px] font-mono opacity-30 pointer-events-none select-none">
                           {file}
                         </span>
                       )}
 
-                      {/* Piece */}
+                      {/* Piece with smooth lift/drop */}
                       {piece && (
-                        <div className="w-[82%] h-[82%] z-10">
+                        <div
+                          className={`w-[84%] h-[84%] z-10 transition-transform duration-150 ease-out ${
+                            isSelected ? '-translate-y-1 scale-110 drop-shadow-md' : 'translate-y-0 scale-100'
+                          }`}
+                        >
                           <ChessPieceIcon
                             piece={piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()}
                           />
                         </div>
                       )}
 
-                      {/* Move dot */}
+                      {/* Move dot with spring scale */}
                       {isValidTarget && (
                         <div
-                          className={`absolute z-20 rounded-full ${
+                          className={`absolute z-20 rounded-full animate-pop ${
                             piece
-                              ? 'w-full h-full border-2 border-zinc-100/40 bg-zinc-100/10'
-                              : 'w-2.5 h-2.5 bg-zinc-100/40'
+                              ? 'w-full h-full border-2 border-zinc-100/50 bg-zinc-100/15'
+                              : 'w-2.5 h-2.5 bg-zinc-100/50 shadow-xs'
                           }`}
                         />
                       )}

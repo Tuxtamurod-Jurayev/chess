@@ -12,7 +12,7 @@
   body {
     background-color: #09090b;
     color: #f4f4f5;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', Roboto, sans-serif;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
@@ -21,6 +21,12 @@
     user-select: none;
     touch-action: manipulation;
     overflow-x: hidden;
+    letter-spacing: -0.015em;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -37,12 +43,93 @@
   border-radius: 9999px;
 }
 
-/* Subtle clean fade */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Polished Spring & Micro-animations */
+@keyframes popIn {
+  0% { transform: scale(0.65); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.18s ease-out forwards;
+@keyframes tileSpawn {
+  0% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes tileMerge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes flipIn {
+  0% { transform: rotateX(0deg); }
+  45% { transform: rotateX(90deg); }
+  55% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+@keyframes shakeError {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes floatScore {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(1.15); }
+}
+
+@keyframes woodFlyLeft {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-120px, 80px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes woodFlyRight {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(120px, 80px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes axeChop {
+  0% { transform: rotate(0deg); }
+  40% { transform: rotate(-35deg) scale(1.1); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-pop {
+  animation: popIn 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-spawn {
+  animation: tileSpawn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-merge {
+  animation: tileMerge 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-flip {
+  animation: flipIn 0.35s ease-in-out forwards;
+}
+
+.animate-shake {
+  animation: shakeError 0.32s ease-in-out forwards;
+}
+
+.animate-float {
+  animation: floatScore 0.6s ease-out forwards;
+}
+
+.animate-chop {
+  animation: axeChop 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.animate-fly-left {
+  animation: woodFlyLeft 0.35s ease-out forwards;
+}
+
+.animate-fly-right {
+  animation: woodFlyRight 0.35s ease-out forwards;
 }

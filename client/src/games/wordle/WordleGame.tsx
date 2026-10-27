@@ -118,10 +118,17 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   else if (status === 'present') bgClass = 'bg-zinc-700 border-zinc-600 text-zinc-100';
                   else if (status === 'absent') bgClass = 'bg-zinc-900 border-zinc-850 text-zinc-600';
 
+                  const isFilled = isCurrentRow && letter;
+
                   return (
                     <div
                       key={colIdx}
-                      className={`h-11 rounded-lg border flex items-center justify-center font-mono font-bold text-sm transition-all ${bgClass}`}
+                      style={{
+                        animationDelay: guess ? `${colIdx * 120}ms` : '0ms',
+                      }}
+                      className={`h-11 rounded-lg border flex items-center justify-center font-mono font-bold text-sm transition-all ${bgClass} ${
+                        guess ? 'animate-flip' : isFilled ? 'scale-105 border-zinc-500' : ''
+                      }`}
                     >
                       {letter}
                     </div>

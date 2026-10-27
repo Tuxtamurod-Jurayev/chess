@@ -17,6 +17,8 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
   const [equation, setEquation] = useState<Equation>(() => generateEquation());
   const [timeLeft, setTimeLeft] = useState(100);
   const [gameOver, setGameOver] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+  const [floatingScore, setFloatingScore] = useState<{ amount: number; id: number } | null>(null);
 
   function generateEquation(): Equation {
     const ops = ['+', '-', '×'];
@@ -70,12 +72,16 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     if (userChoice !== null && userChoice === equation.isCorrect) {
       tg.haptic('light');
-      setScore((s) => s + 10 * combo);
+      const pts = 10 * combo;
+      setScore((s) => s + pts);
+      setFloatingScore({ amount: pts, id: Date.now() });
       setCombo((c) => Math.min(5, c + 1));
       setTimeLeft(100);
       setEquation(generateEquation());
     } else {
       tg.haptic('error');
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 320);
       setCombo(1);
       const newLives = lives - 1;
       setLives(newLives);
@@ -147,8 +153,20 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
           />
         </div>
 
-        {/* Minimal Equation Card */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 flex items-center justify-center my-auto">
+        {/* Minimal Equation Card with animation */}
+        <div
+          className={`bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 flex items-center justify-center my-auto relative overflow-hidden transition-all ${
+            isShaking ? 'animate-shake border-rose-500/60 bg-rose-950/20' : ''
+          }`}
+        >
+          {floatingScore && (
+            <span
+              key={floatingScore.id}
+              className="absolute top-4 right-6 text-sm font-mono font-bold text-amber-400 animate-float pointer-events-none"
+            >
+              +{floatingScore.amount}
+            </span>
+          )}
           <span className="text-3xl sm:text-4xl font-bold font-mono text-zinc-100 tracking-wide">
             {equation.text}
           </span>

@@ -23,6 +23,7 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
   const gameStateRef = useRef({
     stack: [] as Block[],
     currentBlock: { x: 0, width: 140, dir: 1, speed: 3 },
+    fallingPieces: [] as Array<{ x: number; y: number; width: number; vy: number; rot: number; vrot: number; color: string }>,
     score: 0,
     gameOver: false,
   });
@@ -54,6 +55,25 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
         ctx.strokeStyle = '#09090b';
         ctx.lineWidth = 1;
         ctx.strokeRect(b.x, b.y, b.width, blockHeight);
+      }
+
+      // Draw falling cut pieces
+      for (let i = state.fallingPieces.length - 1; i >= 0; i--) {
+        const p = state.fallingPieces[i];
+        p.y += p.vy;
+        p.vy += 0.4;
+        p.rot += p.vrot;
+
+        ctx.save();
+        ctx.translate(p.x + p.width / 2, p.y + blockHeight / 2);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.width / 2, -blockHeight / 2, p.width, blockHeight);
+        ctx.restore();
+
+        if (p.y > canvas.height + 50) {
+          state.fallingPieces.splice(i, 1);
+        }
       }
 
       if (!state.gameOver) {
@@ -108,12 +128,27 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     }
 
     const nextY = topBlock.y - blockHeight;
+    const blockColor = colors[state.stack.length % colors.length];
+
+    if (Math.abs(diff) >= 4) {
+      const cutWidth = Math.abs(diff);
+      const cutX = diff > 0 ? topBlock.x + newWidth : cur.x;
+      state.fallingPieces.push({
+        x: cutX,
+        y: nextY,
+        width: cutWidth,
+        vy: 1,
+        rot: 0,
+        vrot: (diff > 0 ? 1 : -1) * 0.05,
+        color: blockColor,
+      });
+    }
 
     state.stack.push({
       x: newX,
       y: nextY,
       width: newWidth,
-      color: colors[state.stack.length % colors.length],
+      color: blockColor,
     });
 
     if (nextY < 120) {
@@ -145,6 +180,7 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
         },
       ],
       currentBlock: { x: 0, width: 140, dir: 1, speed: 3 },
+      fallingPieces: [],
       score: 0,
       gameOver: false,
     };
