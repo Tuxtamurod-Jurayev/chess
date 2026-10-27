@@ -5,7 +5,6 @@ import { DailyBonusModal } from './components/DailyBonusModal.js';
 import { MatchmakingModal } from './components/MatchmakingModal.js';
 import { PortalHome } from './pages/PortalHome.js';
 import { LeaderboardPage } from './pages/LeaderboardPage.js';
-import { FriendsPage } from './pages/FriendsPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
 import { ALL_GAMES } from './constants.js';
 
@@ -253,7 +252,6 @@ export const App: React.FC = () => {
       <main className="flex-1">
         {activeTab === 'games' && <PortalHome onSelectGame={(g) => setSelectedGame(g)} />}
         {activeTab === 'leaderboard' && <LeaderboardPage />}
-        {activeTab === 'friends' && <FriendsPage />}
         {activeTab === 'profile' && <ProfilePage />}
       </main>
 

@@ -268,7 +268,7 @@ export class TelegramBotService {
       `🪙 <b>Tangalar (Coins) qanday olinadi?</b>\n` +
       `• Har kuni portalga kirib <b>Kunlik bonus</b>ni oling (Streak oshib boradi);\n` +
       `• Solo o‘yinlarda yuqori ball to‘plang (+10..50 tanga);\n` +
-      `• Do‘stlaringizni taklif qiling (+100 tanga har bir do‘st uchun).\n\n` +
+      `• Bellashuvlarda g‘alaba qozoning!\n\n` +
       `⚔️ <b>1v1 Onlayn bellashuv:</b>\n` +
       `• Shaxmat, Shashka yoki Tic-Tac-Toe o‘yinlarida "1v1 Onlayn" tugmasini bosing;\n` +
       `• Matchmaking orqali tasodifiy raqib bilan yoki to‘g‘ridan-to‘g‘ri do‘stingizga xona ssilkasi yuborib bellashing!\n\n` +

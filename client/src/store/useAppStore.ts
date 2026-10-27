@@ -3,7 +3,7 @@ import { UserProfile, GameMetadata, GameRoom, GameId } from '../types.js';
 
 interface AppState {
   user: UserProfile | null;
-  activeTab: 'games' | 'leaderboard' | 'friends' | 'profile';
+  activeTab: 'games' | 'leaderboard' | 'profile';
   selectedGame: GameMetadata | null;
   activeRoom: GameRoom | null;
   isMatchmaking: boolean;
@@ -14,7 +14,7 @@ interface AppState {
 
   setUser: (user: UserProfile) => void;
   updateCoins: (coins: number) => void;
-  setActiveTab: (tab: 'games' | 'leaderboard' | 'friends' | 'profile') => void;
+  setActiveTab: (tab: 'games' | 'leaderboard' | 'profile') => void;
   setSelectedGame: (game: GameMetadata | null) => void;
   setActiveRoom: (room: GameRoom | null) => void;
   setMatchmaking: (isMatchmaking: boolean, gameId?: GameId | null) => void;

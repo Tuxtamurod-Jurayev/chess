@@ -473,8 +473,8 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                       {/* Piece with smooth lift/drop */}
                       {piece && (
                         <div
-                          className={`w-[84%] h-[84%] flex items-center justify-center transition-transform duration-100 ${
-                            isSelected ? '-translate-y-1 scale-105' : ''
+                          className={`w-[86%] h-[86%] flex items-center justify-center transition-transform duration-100 ${
+                            isSelected ? '-translate-y-1 scale-108 filter drop-shadow-md' : 'active:scale-95'
                           }`}
                         >
                           <ChessPieceIcon piece={piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()} />

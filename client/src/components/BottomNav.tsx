@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gamepad2, Trophy, Users, User } from 'lucide-react';
+import { Gamepad2, Trophy, User } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore.js';
 import { tg } from '../services/telegram.js';
 
@@ -11,7 +11,6 @@ export const BottomNav: React.FC = () => {
   const tabs = [
     { id: 'games', label: 'O‘yinlar', icon: Gamepad2, color: 'text-blue-400', activeBg: 'bg-blue-500/15' },
     { id: 'leaderboard', label: 'Reyting', icon: Trophy, color: 'text-amber-400', activeBg: 'bg-amber-500/15' },
-    { id: 'friends', label: 'Do‘stlar', icon: Users, color: 'text-emerald-400', activeBg: 'bg-emerald-500/15' },
     { id: 'profile', label: 'Profil', icon: User, color: 'text-purple-400', activeBg: 'bg-purple-500/15' },
   ] as const;
 
