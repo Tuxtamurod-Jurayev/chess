@@ -7,7 +7,7 @@ export const FriendsPage: React.FC = () => {
   const { user, showToast } = useAppStore();
   const [copied, setCopied] = useState(false);
 
-  const botUsername = 'TelegramGamesPortalBot';
+  const botUsername = 'my_game001_bot';
   const inviteLink = `https://t.me/${botUsername}?startapp=ref_${user?.telegramId || '123'}`;
 
   const handleShare = () => {

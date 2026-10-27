@@ -9,6 +9,7 @@
     "build:client": "npm --prefix client run build",
     "build:server": "npm --prefix server run build",
     "build": "npm run build:server && npm run build:client",
+    "tunnel": "npx --yes localtunnel --port 3001 --subdomain my-games-001",
     "start": "npm --prefix server run start"
   },
   "devDependencies": {

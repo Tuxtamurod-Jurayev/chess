@@ -3,13 +3,21 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { store } from './services/store.js';
 import { parseAndValidateTelegramData } from './utils/telegramAuth.js';
 import { RoomManager } from './sockets/RoomManager.js';
 import { MatchmakingQueue } from './sockets/MatchmakingQueue.js';
+import { TelegramBotService } from './services/telegramBot.js';
 import { GameId } from './types.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
 
 const app = express();
 const server = createServer(app);
@@ -23,8 +31,20 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// Tunnel bypass header
+app.use((req, res, next) => {
+  res.setHeader('bypass-tunnel-reminder', 'true');
+  next();
+});
+
 const roomManager = new RoomManager(io);
 const matchmakingQueue = new MatchmakingQueue(io, roomManager);
+
+// Telegram Bot instance
+const telegramBot = new TelegramBotService({
+  token: process.env.TELEGRAM_BOT_TOKEN || '',
+  webappUrl: process.env.WEBAPP_URL || '',
+});
 
 // REST Endpoints
 app.get('/health', (req, res) => {
@@ -134,7 +154,25 @@ io.on('connection', (socket) => {
   });
 });
 
+// Serve static frontend files if built
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/health')) {
+      return next();
+    }
+    const indexPath = path.join(clientDistPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
+  });
+}
+
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Telegram Gaming Portal Backend running on http://localhost:${PORT}`);
+  // Start Telegram Bot
+  await telegramBot.start();
 });
