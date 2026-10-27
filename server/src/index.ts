@@ -37,14 +37,16 @@ app.use((req, res, next) => {
   next();
 });
 
-const roomManager = new RoomManager(io);
-const matchmakingQueue = new MatchmakingQueue(io, roomManager);
-
 // Telegram Bot instance
 const webappUrl = process.env.WEBAPP_URL || process.env.RENDER_EXTERNAL_URL || '';
 const telegramBot = new TelegramBotService({
   token: process.env.TELEGRAM_BOT_TOKEN || '',
   webappUrl,
+});
+
+const roomManager = new RoomManager(io);
+const matchmakingQueue = new MatchmakingQueue(io, roomManager, (user, gameId) => {
+  telegramBot.broadcastGameInvite(user.firstName, gameId, user.telegramId);
 });
 
 // REST Endpoints
@@ -71,6 +73,9 @@ app.post('/api/auth/telegram', (req, res) => {
   }
 
   const user = store.getOrCreateUser(tgData);
+  if (tgData.id) {
+    telegramBot.registerChatId(tgData.id);
+  }
   res.json({ user });
 });
 

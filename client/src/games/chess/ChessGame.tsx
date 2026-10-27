@@ -322,8 +322,8 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Minimal 8x8 Chessboard */}
-          <div className="relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-zinc-800 shadow-xl my-2">
+          {/* 8x8 Tournament Blue/White Chessboard (matching 2-rasm) */}
+          <div className="relative aspect-square w-full rounded-xl overflow-hidden border-4 border-[#354562] shadow-2xl my-2 bg-[#354562]">
             <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
               {ranks.map((rank, rIdx) =>
                 files.map((file, fIdx) => {
@@ -340,17 +340,17 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                     <div
                       key={square}
                       onClick={() => handleSquareClick(square)}
-                      className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${
-                        isDark ? 'bg-[#739552]' : 'bg-[#ebecd0]'
-                      } ${isLastMove ? '!bg-[#baca44]' : ''} ${isSelected ? '!bg-[#f6f669]' : ''} ${
+                      className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 select-none ${
+                        isDark ? 'bg-[#7795C2]' : 'bg-[#FFFFFF]'
+                      } ${isLastMove ? '!bg-[#96B8E8]' : ''} ${isSelected ? '!bg-[#B2CEF7]' : ''} ${
                         isCheck ? '!bg-rose-500/80 animate-pulse' : ''
                       }`}
                     >
-                      {/* Subdued Rank/File labels */}
+                      {/* Subdued Rank/File labels matching 2-rasm */}
                       {fIdx === 0 && (
                         <span
                           className={`absolute top-0.5 left-1 text-[8px] font-mono font-bold select-none pointer-events-none ${
-                            isDark ? 'text-[#ebecd0]' : 'text-[#739552]'
+                            isDark ? 'text-white/60' : 'text-[#354562]/70'
                           }`}
                         >
                           {rank}
@@ -359,7 +359,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                       {rIdx === 7 && (
                         <span
                           className={`absolute bottom-0.5 right-1 text-[8px] font-mono font-bold select-none pointer-events-none ${
-                            isDark ? 'text-[#ebecd0]' : 'text-[#739552]'
+                            isDark ? 'text-white/60' : 'text-[#354562]/70'
                           }`}
                         >
                           {file}

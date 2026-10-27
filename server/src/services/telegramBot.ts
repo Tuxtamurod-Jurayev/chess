@@ -15,6 +15,8 @@ export class TelegramBotService {
   private isPolling = false;
   private offset = 0;
   private botUsername = 'my_game001_bot';
+  private activeChatIds = new Set<number>();
+  private lastBroadcastTime = 0;
 
   constructor(config: TelegramBotConfig) {
     this.token = config.token;
@@ -97,6 +99,52 @@ export class TelegramBotService {
     }
   }
 
+  public registerChatId(chatId: number) {
+    if (chatId) this.activeChatIds.add(chatId);
+  }
+
+  public async broadcastGameInvite(hostName: string, gameId: string, excludeTgId?: number) {
+    const now = Date.now();
+    // 25 second cooldown to avoid spamming
+    if (now - this.lastBroadcastTime < 25000) return;
+    this.lastBroadcastTime = now;
+
+    const gameNames: Record<string, string> = {
+      chess: 'Shaxmat (Chess)',
+      checkers: 'Shashka (Checkers)',
+      tictactoe: 'Tic-Tac-Toe',
+      'math-battle': 'Matematik Duel',
+    };
+    const gameName = gameNames[gameId] || 'O‘yin';
+    const webAppUrl = this.getAppUrl(`join_${gameId}`);
+
+    const message = `♟️ <b>${gameName} o‘yiniga taklif!</b>\n\n` +
+      `<b>${hostName}</b> ayni daqiqalarda sizni 1v1 onlayn o‘yiniga taklif qilmoqda!\n\n` +
+      `Qo‘shilish uchun quyidagi tugmani bosing 👇`;
+
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: `⚔️ O‘yinga qo‘shilish (${gameName})`,
+            web_app: { url: webAppUrl },
+          },
+        ],
+      ],
+    };
+
+    console.log(`[TelegramBot] Broadcasting invite for ${gameName} from ${hostName} to ${this.activeChatIds.size} users`);
+
+    for (const chatId of this.activeChatIds) {
+      if (excludeTgId && chatId === excludeTgId) continue;
+      try {
+        await this.sendMessage(chatId, message, replyMarkup);
+      } catch (err: any) {
+        console.warn(`[TelegramBot] Failed sending invite to ${chatId}:`, err.message || err);
+      }
+    }
+  }
+
   public stop() {
     this.isPolling = false;
   }
@@ -136,6 +184,7 @@ export class TelegramBotService {
       const firstName = msg.from?.first_name || 'Geymer';
 
       if (!chatId) return;
+      this.activeChatIds.add(chatId);
 
       if (text.startsWith('/start')) {
         const parts = text.split(' ');

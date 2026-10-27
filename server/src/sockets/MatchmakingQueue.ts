@@ -13,10 +13,12 @@ export class MatchmakingQueue {
   private io: Server;
   private roomManager: RoomManager;
   private queues: Map<GameId, QueuedPlayer[]> = new Map();
+  public onQueueJoin?: (user: UserProfile, gameId: GameId) => void;
 
-  constructor(io: Server, roomManager: RoomManager) {
+  constructor(io: Server, roomManager: RoomManager, onQueueJoin?: (user: UserProfile, gameId: GameId) => void) {
     this.io = io;
     this.roomManager = roomManager;
+    this.onQueueJoin = onQueueJoin;
   }
 
   public addPlayer(user: UserProfile, socket: Socket, gameId: GameId) {
@@ -54,6 +56,16 @@ export class MatchmakingQueue {
       });
       socket.emit('queue_joined', { gameId, waitSeconds: 15 });
       console.log(`[Matchmaking] ${user.username} joined queue for ${gameId}`);
+
+      // Broadcast real-time invite to all other active WebApp players
+      socket.broadcast.emit('game_challenge_broadcast', {
+        gameId,
+        hostName: user.firstName,
+        hostUserId: user.id,
+      });
+
+      // Notify Telegram Bot users
+      this.onQueueJoin?.(user, gameId);
     }
   }
 

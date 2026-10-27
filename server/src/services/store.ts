@@ -57,6 +57,10 @@ class InMemoryStore {
     return this.users.get(userId);
   }
 
+  public getAllUsers(): UserProfile[] {
+    return Array.from(this.users.values());
+  }
+
   public claimDailyBonus(userId: string): { success: boolean; coinsAwarded: number; newStreak: number; message: string } {
     const user = this.users.get(userId);
     if (!user) return { success: false, coinsAwarded: 0, newStreak: 0, message: 'Foydalanuvchi topilmadi' };

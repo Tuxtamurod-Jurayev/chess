@@ -9,243 +9,253 @@ export const ChessPieceIcon: React.FC<ChessPieceIconProps> = ({ piece, className
   const isWhite = piece === piece.toUpperCase();
   const type = piece.toLowerCase();
 
-  const whiteFill = '#ffffff';
-  const whiteStroke = '#222222';
-  const blackFill = '#1c1917';
-  const blackStroke = '#f5f5f4';
+  // Gradients matching 2-rasm:
+  // White pieces: Glossy ivory/cream gradient (#FFFFFF to #E8E5D0) with clean dark outline
+  // Black pieces: Deep obsidian gradient (#3F4148 to #151619) with crisp white/silver highlights
+  const whiteGradId = `wGrad_${type}`;
+  const blackGradId = `bGrad_${type}`;
+
+  const renderDefs = () => (
+    <defs>
+      <linearGradient id={whiteGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#FFFFFF" />
+        <stop offset="65%" stopColor="#FAF8ED" />
+        <stop offset="100%" stopColor="#E2DDD0" />
+      </linearGradient>
+      <linearGradient id={blackGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#43454D" />
+        <stop offset="50%" stopColor="#25262B" />
+        <stop offset="100%" stopColor="#121316" />
+      </linearGradient>
+      <filter id="pieceShadow" x="-10%" y="-10%" width="120%" height="125%">
+        <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.35" />
+      </filter>
+    </defs>
+  );
 
   switch (type) {
-    case 'k': // King
+    case 'p': // Pawn
       if (isWhite) {
         return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22.5 11.63V6M20 8h5" strokeWidth="1.5" />
-              <path
-                d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-5s-2.5-3-10-3-10 3-10 3v5"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M11.5 30c5.5-3 16.5-3 22 0m-22 3.5c5.5-3 16.5-3 22 0m-22 3.5c5.5-3 16.5-3 22 0"
-                stroke={whiteStroke}
-              />
-              <circle cx="22.5" cy="20" r="2.5" fill={whiteFill} stroke={whiteStroke} />
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* Head */}
+              <circle cx="22.5" cy="11.5" r="5.5" />
+              {/* Neck & Body */}
+              <path d="M19 17C17 21 16 26 15 32H30C29 26 28 21 26 17H19Z" />
+              {/* Pedestal & Base */}
+              <path d="M12 36C15 34 30 34 33 36V38H12V36Z" />
+              <rect x="10" y="38" width="25" height="3" rx="1.5" />
             </g>
+            {/* White glossy specular highlight */}
+            <ellipse cx="20.5" cy="10" rx="2" ry="1.2" fill="#FFFFFF" opacity="0.8" />
           </svg>
         );
       }
       return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22.5 11.63V6M20 8h5" stroke={blackStroke} strokeWidth="1.5" />
-            <path
-              d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-5s-2.5-3-10-3-10 3-10 3v5"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M11.5 30c5.5-3 16.5-3 22 0m-22 3.5c5.5-3 16.5-3 22 0m-22 3.5c5.5-3 16.5-3 22 0"
-              stroke={blackStroke}
-            />
-            <circle cx="22.5" cy="20" r="2.5" fill={blackFill} stroke={blackStroke} />
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="22.5" cy="11.5" r="5.5" />
+            <path d="M19 17C17 21 16 26 15 32H30C29 26 28 21 26 17H19Z" />
+            <path d="M12 36C15 34 30 34 33 36V38H12V36Z" />
+            <rect x="10" y="38" width="25" height="3" rx="1.5" />
           </g>
-        </svg>
-      );
-
-    case 'q': // Queen
-      if (isWhite) {
-        return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path
-                d="M8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm16.5-4.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM41 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM15 9a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm19 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M9 26c8.5-1.5 18.5-1.5 27 0l2-12-7 11-6-13-2.5 13-6-11-2 12-5.5-11z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M11.5 30c3.5-1 18.5-1 22 0m-21.5 4c3.5-1 17.5-1 21 0m-21 4c3.5-1 17.5-1 21 0"
-                stroke={whiteStroke}
-              />
-              <path
-                d="M11.5 37.5c5.5 3.5 16.5 3.5 22 0v-4s-3.5-3.5-11-3.5-11 3.5-11 3.5v4z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-            </g>
-          </svg>
-        );
-      }
-      return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path
-              d="M8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm16.5-4.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM41 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM15 9a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm19 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M9 26c8.5-1.5 18.5-1.5 27 0l2-12-7 11-6-13-2.5 13-6-11-2 12-5.5-11z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M11.5 30c3.5-1 18.5-1 22 0m-21.5 4c3.5-1 17.5-1 21 0m-21 4c3.5-1 17.5-1 21 0"
-              stroke={blackStroke}
-            />
-            <path
-              d="M11.5 37.5c5.5 3.5 16.5 3.5 22 0v-4s-3.5-3.5-11-3.5-11 3.5-11 3.5v4z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-          </g>
+          {/* Subtle white inner sheen */}
+          <ellipse cx="20.5" cy="10" rx="1.8" ry="1" fill="#FFFFFF" opacity="0.6" />
+          <path d="M18 24C17.5 27 17 30 16.5 32" stroke="#FFFFFF" strokeWidth="0.9" opacity="0.6" />
         </svg>
       );
 
     case 'r': // Rook
       if (isWhite) {
         return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path
-                d="M9 39h27v-5H9v5zm3-5V20.5h21V34H12zm2-13.5l1-7h15l1 7H14z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M12 9v5h4v-3h5v3h4v-3h5v3h4V9H12z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path d="M14 26.5h17m-17 4h17" stroke={whiteStroke} />
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* Battlement Ramparts */}
+              <path d="M11 9H15V13H19V9H26V13H30V9H34V15H11V9Z" />
+              {/* Stem */}
+              <path d="M14 15L15 30H30L31 15H14Z" />
+              {/* Base */}
+              <path d="M11 34C13 32 32 32 34 34V37H11V34Z" />
+              <rect x="9" y="37" width="27" height="4" rx="1.5" />
             </g>
+            <line x1="14" y1="19" x2="31" y2="19" stroke="#1A1A1A" strokeWidth="1" opacity="0.3" />
+            <line x1="15" y1="28" x2="30" y2="28" stroke="#1A1A1A" strokeWidth="1" opacity="0.3" />
+            <rect x="16" y="10" width="2" height="3" fill="#FFFFFF" opacity="0.8" />
           </svg>
         );
       }
       return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path
-              d="M9 39h27v-5H9v5zm3-5V20.5h21V34H12zm2-13.5l1-7h15l1 7H14z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M12 9v5h4v-3h5v3h4v-3h5v3h4V9H12z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path d="M14 26.5h17m-17 4h17" stroke={blackStroke} />
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 9H15V13H19V9H26V13H30V9H34V15H11V9Z" />
+            <path d="M14 15L15 30H30L31 15H14Z" />
+            <path d="M11 34C13 32 32 32 34 34V37H11V34Z" />
+            <rect x="9" y="37" width="27" height="4" rx="1.5" />
           </g>
+          {/* Inner white brick lines matching 2-rasm */}
+          <line x1="14" y1="19" x2="31" y2="19" stroke="#FFFFFF" strokeWidth="1.2" />
+          <line x1="15" y1="25" x2="30" y2="25" stroke="#FFFFFF" strokeWidth="1.2" />
+        </svg>
+      );
+
+    case 'n': // Knight (Classic handsome curved silhouette matching 2-rasm)
+      if (isWhite) {
+        return (
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 10C21 8 18 6 15 8C12 10 11 13 10 17C9 20 10 23 13 24C12 25 10 27 11 29C12 30 14 30 16 28C14 32 15 36 21 37H33C33 34 34 26 33 22C32 17 28 13 22 10Z" />
+              <rect x="11" y="37" width="23" height="4" rx="1.5" />
+              {/* Mane notches */}
+              <path d="M24 11C28 13 31 16 31 20" stroke="#1A1A1A" strokeWidth="1.3" />
+              {/* Nostril & Eye */}
+              <circle cx="13" cy="18" r="1.2" fill="#1A1A1A" />
+              <path d="M16 14C17 13 18 13 19 14" stroke="#1A1A1A" strokeWidth="1.2" />
+            </g>
+            <path d="M18 16C19 20 20 26 21 32" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.8" />
+          </svg>
+        );
+      }
+      return (
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 10C21 8 18 6 15 8C12 10 11 13 10 17C9 20 10 23 13 24C12 25 10 27 11 29C12 30 14 30 16 28C14 32 15 36 21 37H33C33 34 34 26 33 22C32 17 28 13 22 10Z" />
+            <rect x="11" y="37" width="23" height="4" rx="1.5" />
+            {/* White mane and facial details matching 2-rasm */}
+            <path d="M24 11C28 13 31 16 31 20" stroke="#FFFFFF" strokeWidth="1.3" />
+            <circle cx="13" cy="18" r="1.2" fill="#FFFFFF" />
+            <path d="M16 14C17 13 18 13 19 14" stroke="#FFFFFF" strokeWidth="1.2" />
+          </g>
+          <path d="M18 16C19 20 20 26 21 32" stroke="#FFFFFF" strokeWidth="1.2" opacity="0.6" />
         </svg>
       );
 
     case 'b': // Bishop
       if (isWhite) {
         return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <g fill={whiteFill} stroke={whiteStroke}>
-                <path d="M9 36c3.4-1 10.1.4 13.5-2 3.4 2.4 10.1 1 13.5 2 0 0 1.6.5 3 2-.7 1-1.6 1-3 .5-3.4-1-10.1.5-13.5-1-3.4 1.5-10.1 0-13.5 1-1.3.5-2.3.5-3-.5 1.4-1.5 3-2 3-2z" />
-                <path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z" />
-                <circle cx="22.5" cy="8" r="2" />
-              </g>
-              <path d="M17.5 26h10M15 30h15m-7.5-16v6m-3-3h6" stroke={whiteStroke} />
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* Small top cross */}
+              <circle cx="22.5" cy="8" r="1.5" />
+              {/* Mitre head */}
+              <path d="M16 19C16 12 19 9 22.5 9C26 9 29 12 29 19C29 25 27 28 25 30H20C18 28 16 25 16 19Z" />
+              {/* Slit */}
+              <path d="M21 13L26 18" stroke="#1A1A1A" strokeWidth="1.5" />
+              {/* Collar ribbon matching 2-rasm */}
+              <path d="M15 31C19 32 26 32 30 31L32 35H13L15 31Z" />
+              {/* Base */}
+              <rect x="10" y="36" width="25" height="4" rx="1.5" />
             </g>
+            {/* White cross inside mitre */}
+            <line x1="22.5" y1="18" x2="22.5" y2="24" stroke="#1A1A1A" strokeWidth="1.3" />
+            <line x1="20" y1="20.5" x2="25" y2="20.5" stroke="#1A1A1A" strokeWidth="1.3" />
           </svg>
         );
       }
       return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <g fill={blackFill} stroke={blackStroke}>
-              <path d="M9 36c3.4-1 10.1.4 13.5-2 3.4 2.4 10.1 1 13.5 2 0 0 1.6.5 3 2-.7 1-1.6 1-3 .5-3.4-1-10.1.5-13.5-1-3.4 1.5-10.1 0-13.5 1-1.3.5-2.3.5-3-.5 1.4-1.5 3-2 3-2z" />
-              <path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z" />
-              <circle cx="22.5" cy="8" r="2" />
-            </g>
-            <path d="M17.5 26h10M15 30h15m-7.5-16v6m-3-3h6" stroke={blackStroke} />
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="22.5" cy="8" r="1.5" />
+            <path d="M16 19C16 12 19 9 22.5 9C26 9 29 12 29 19C29 25 27 28 25 30H20C18 28 16 25 16 19Z" />
+            <path d="M21 13L26 18" stroke="#FFFFFF" strokeWidth="1.5" />
+            <path d="M15 31C19 32 26 32 30 31L32 35H13L15 31Z" />
+            <rect x="10" y="36" width="25" height="4" rx="1.5" />
           </g>
+          {/* Inner white cross matching 2-rasm */}
+          <line x1="22.5" y1="18" x2="22.5" y2="24" stroke="#FFFFFF" strokeWidth="1.3" />
+          <line x1="20" y1="20.5" x2="25" y2="20.5" stroke="#FFFFFF" strokeWidth="1.3" />
         </svg>
       );
 
-    case 'n': // Knight
+    case 'q': // Queen (Coronet with pearls and multi-tier base matching 2-rasm)
       if (isWhite) {
         return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path
-                d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path
-                d="M24 18c.38 2.91-5.55 7.37-8 9-3 2-2.82 4.34-5 4-1.04-.94 1.41-3.04 0-3-1 0-.64 1.41-2 1-1-.41-1.58-2.48.5-3 2.5-1 3.5-4.5 3.5-7.5s-2-6-5-7c1.5-1.5 4.5-.5 6 .5 1.5 1 2 2.5 4 3 1.5 0 3-1 4-1.5 1.5-.5 3-1 4 0z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <circle cx="9.5" cy="25.5" r="1" fill={whiteStroke} />
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* 5 Coronet pearls */}
+              <circle cx="8" cy="12" r="2" />
+              <circle cx="15" cy="9" r="2" />
+              <circle cx="22.5" cy="7.5" r="2" />
+              <circle cx="30" cy="9" r="2" />
+              <circle cx="37" cy="12" r="2" />
+              {/* Crown spokes */}
+              <path d="M9 26L7 14L15 22L22.5 10L30 22L38 14L36 26H9Z" />
+              {/* Middle waistband */}
+              <path d="M11 27C15 28.5 30 28.5 34 27V32H11V27Z" />
+              {/* Multi-tier round pedestal base */}
+              <path d="M10 33C14 34.5 31 34.5 35 33V36H10V33Z" />
+              <rect x="8" y="37" width="29" height="4" rx="2" />
             </g>
+            <circle cx="22.5" cy="20" r="2" fill="#1A1A1A" />
           </svg>
         );
       }
       return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path
-              d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path
-              d="M24 18c.38 2.91-5.55 7.37-8 9-3 2-2.82 4.34-5 4-1.04-.94 1.41-3.04 0-3-1 0-.64 1.41-2 1-1-.41-1.58-2.48.5-3 2.5-1 3.5-4.5 3.5-7.5s-2-6-5-7c1.5-1.5 4.5-.5 6 .5 1.5 1 2 2.5 4 3 1.5 0 3-1 4-1.5 1.5-.5 3-1 4 0z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <circle cx="9.5" cy="25.5" r="1" fill={blackStroke} />
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8" cy="12" r="2" />
+            <circle cx="15" cy="9" r="2" />
+            <circle cx="22.5" cy="7.5" r="2" />
+            <circle cx="30" cy="9" r="2" />
+            <circle cx="37" cy="12" r="2" />
+            <path d="M9 26L7 14L15 22L22.5 10L30 22L38 14L36 26H9Z" />
+            <path d="M11 27C15 28.5 30 28.5 34 27V32H11V27Z" />
+            <path d="M10 33C14 34.5 31 34.5 35 33V36H10V33Z" />
+            <rect x="8" y="37" width="29" height="4" rx="2" />
           </g>
+          {/* Inner white jewel details */}
+          <line x1="11" y1="29.5" x2="34" y2="29.5" stroke="#FFFFFF" strokeWidth="1.2" />
+          <circle cx="22.5" cy="20" r="2" fill="#FFFFFF" />
         </svg>
       );
 
-    case 'p': // Pawn
+    case 'k': // King (Broad royal arched crown with cross matching 2-rasm)
       if (isWhite) {
         return (
-          <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))">
-            <g fill="none" fillRule="evenodd" stroke={whiteStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path
-                d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38-1.95 1.12-3.28 3.21-3.28 5.62 0 2.03.93 3.84 2.38 5.06-3.09 1.44-5.38 4.67-5.38 8.44h19c0-3.77-2.29-7-5.38-8.44 1.45-1.22 2.38-3.03 2.38-5.06 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z"
-                fill={whiteFill}
-                stroke={whiteStroke}
-              />
-              <path d="M12 39h21v-3H12v3z" fill={whiteFill} stroke={whiteStroke} />
+          <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+            {renderDefs()}
+            <g fill={`url(#${whiteGradId})`} stroke="#1A1A1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* Royal Cross on top */}
+              <line x1="22.5" y1="4" x2="22.5" y2="10" strokeWidth="1.8" />
+              <line x1="19.5" y1="6.5" x2="25.5" y2="6.5" strokeWidth="1.8" />
+              {/* Arched Royal Dome */}
+              <path d="M14 23C13 15 17 11 22.5 11C28 11 32 15 31 23H14Z" />
+              {/* Crown curves */}
+              <path d="M14 23C17 24.5 28 24.5 31 23L33 30H12L14 23Z" />
+              {/* Pedestal */}
+              <path d="M11 31C15 32.5 30 32.5 34 31V35H11V31Z" />
+              <rect x="8" y="36" width="29" height="4" rx="2" />
             </g>
+            {/* Inner royal arch lines */}
+            <path d="M18 23C18 16 20 13 22.5 13C25 13 27 16 27 23" stroke="#1A1A1A" strokeWidth="1.2" fill="none" />
+            <ellipse cx="22.5" cy="18" rx="2.5" ry="1.5" fill="#1A1A1A" />
           </svg>
         );
       }
       return (
-        <svg viewBox="0 0 45 45" className={className} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))">
-          <g fill="none" fillRule="evenodd" stroke={blackStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path
-              d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38-1.95 1.12-3.28 3.21-3.28 5.62 0 2.03.93 3.84 2.38 5.06-3.09 1.44-5.38 4.67-5.38 8.44h19c0-3.77-2.29-7-5.38-8.44 1.45-1.22 2.38-3.03 2.38-5.06 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z"
-              fill={blackFill}
-              stroke={blackStroke}
-            />
-            <path d="M12 39h21v-3H12v3z" fill={blackFill} stroke={blackStroke} />
+        <svg viewBox="0 0 45 45" className={className} filter="url(#pieceShadow)">
+          {renderDefs()}
+          <g fill={`url(#${blackGradId})`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22.5" y1="4" x2="22.5" y2="10" strokeWidth="1.8" />
+            <line x1="19.5" y1="6.5" x2="25.5" y2="6.5" strokeWidth="1.8" />
+            <path d="M14 23C13 15 17 11 22.5 11C28 11 32 15 31 23H14Z" />
+            <path d="M14 23C17 24.5 28 24.5 31 23L33 30H12L14 23Z" />
+            <path d="M11 31C15 32.5 30 32.5 34 31V35H11V31Z" />
+            <rect x="8" y="36" width="29" height="4" rx="2" />
           </g>
+          {/* Inner white royal arch lines matching 2-rasm */}
+          <path d="M18 23C18 16 20 13 22.5 13C25 13 27 16 27 23" stroke="#FFFFFF" strokeWidth="1.2" fill="none" />
+          <ellipse cx="22.5" cy="18" rx="2.5" ry="1.5" fill="#FFFFFF" />
         </svg>
       );
 

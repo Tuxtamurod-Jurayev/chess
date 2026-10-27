@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header.js';
 import { BottomNav } from './components/BottomNav.js';
 import { DailyBonusModal } from './components/DailyBonusModal.js';
@@ -7,6 +7,7 @@ import { PortalHome } from './pages/PortalHome.js';
 import { LeaderboardPage } from './pages/LeaderboardPage.js';
 import { FriendsPage } from './pages/FriendsPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
+import { ALL_GAMES } from './constants.js';
 
 // Games
 import { ChessGame } from './games/chess/ChessGame.js';
@@ -58,14 +59,43 @@ export const App: React.FC = () => {
     api.authTelegram(tg.initData, mockUser)
       .then((res) => {
         setUser(res.user);
+
+        // Check if user came from a deep link invite (e.g. startapp=join_chess)
+        const startParam = (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param || new URLSearchParams(window.location.search).get('startapp');
+        if (startParam && startParam.startsWith('join_')) {
+          const gameId = startParam.replace('join_', '');
+          const target = ALL_GAMES.find((g) => g.id === gameId);
+          if (target) {
+            setSelectedGame(target);
+            setMatchmaking(true, target.id as any);
+            socket.emit('join_queue', { userId: res.user.id, gameId: target.id });
+          }
+        }
       })
       .catch((err) => {
         console.error('Auth error:', err);
       });
-  }, [setUser]);
+  }, [setUser, setSelectedGame, setMatchmaking]);
+
+  const [incomingChallenge, setIncomingChallenge] = useState<{
+    gameId: string;
+    hostName: string;
+    hostUserId: string;
+  } | null>(null);
 
   // Socket event listeners
   useEffect(() => {
+    socket.on('game_challenge_broadcast', (data: { gameId: string; hostName: string; hostUserId: string }) => {
+      if (user && data.hostUserId === user.id) return;
+      tg.haptic('warning');
+      setIncomingChallenge(data);
+
+      // Auto dismiss after 14 seconds
+      setTimeout(() => {
+        setIncomingChallenge((curr) => (curr?.hostUserId === data.hostUserId ? null : curr));
+      }, 14000);
+    });
+
     socket.on('match_found', (data: any) => {
       tg.haptic('success');
       setMatchmaking(false);
@@ -93,32 +123,85 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      socket.off('game_challenge_broadcast');
       socket.off('match_found');
       socket.off('error');
     };
   }, [setMatchmaking, setActiveRoom, setSelectedGame]);
 
+  // Floating Challenge Invite Banner
+  const renderChallengeBanner = () => {
+    if (!incomingChallenge) return null;
+    return (
+      <div className="fixed top-3 left-3 right-3 z-50 p-3 rounded-2xl bg-gradient-to-r from-blue-950 via-indigo-900 to-blue-950 border border-blue-400/50 text-white shadow-2xl backdrop-blur-md flex items-center justify-between animate-bounce">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <span className="text-xl">♟️</span>
+          <div className="min-w-0">
+            <span className="text-xs font-bold block truncate">
+              {incomingChallenge.hostName} sizni o‘yinga chaqirmoqda!
+            </span>
+            <span className="text-[10px] text-blue-300 font-mono">
+              {incomingChallenge.gameId.toUpperCase()} • 1v1 Onlayn
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={() => {
+              tg.haptic('medium');
+              const target = ALL_GAMES.find((g) => g.id === incomingChallenge.gameId) || ALL_GAMES[0];
+              setSelectedGame(target);
+              setMatchmaking(true, target.id as any);
+              if (user) {
+                socket.emit('join_queue', { userId: user.id, gameId: target.id });
+              }
+              setIncomingChallenge(null);
+            }}
+            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs rounded-xl shadow-md active:scale-95"
+          >
+            Qo‘shilish
+          </button>
+          <button
+            onClick={() => setIncomingChallenge(null)}
+            className="p-1 text-zinc-400 hover:text-white rounded-lg text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Active game view
   if (selectedGame) {
+    let gameEl: React.ReactNode = null;
     switch (selectedGame.id) {
       case 'chess':
-        return <ChessGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <ChessGame onBack={() => setSelectedGame(null)} />;
+        break;
       case '2048':
-        return <Game2048 onBack={() => setSelectedGame(null)} />;
+        gameEl = <Game2048 onBack={() => setSelectedGame(null)} />;
+        break;
       case 'math-battle':
-        return <MathBattleGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <MathBattleGame onBack={() => setSelectedGame(null)} />;
+        break;
       case 'tictactoe':
-        return <TicTacToeGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <TicTacToeGame onBack={() => setSelectedGame(null)} />;
+        break;
       case 'timberjack':
-        return <TimberjackGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <TimberjackGame onBack={() => setSelectedGame(null)} />;
+        break;
       case 'knife-hit':
-        return <KnifeHitGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <KnifeHitGame onBack={() => setSelectedGame(null)} />;
+        break;
       case 'tower-blocks':
-        return <TowerBlocksGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <TowerBlocksGame onBack={() => setSelectedGame(null)} />;
+        break;
       case 'checkers':
-        return <CheckersGame onBack={() => setSelectedGame(null)} />;
+        gameEl = <CheckersGame onBack={() => setSelectedGame(null)} />;
+        break;
       default:
-        return (
+        gameEl = (
           <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
             <h2 className="text-lg font-bold mb-2">{selectedGame.titleUz}</h2>
             <p className="text-xs text-slate-400 mb-4">Tez kunda ishga tushadi!</p>
@@ -131,10 +214,17 @@ export const App: React.FC = () => {
           </div>
         );
     }
+    return (
+      <>
+        {renderChallengeBanner()}
+        {gameEl}
+      </>
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {renderChallengeBanner()}
       {/* Top Header */}
       <Header />
 
