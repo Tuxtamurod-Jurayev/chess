@@ -60,12 +60,12 @@ export class TelegramBotService {
         ],
       });
 
-      // 4. Set Chat Menu Button (Native "O'ynash" button in Telegram chat bar)
+      // 4. Set Chat Menu Button (Native "Boshlash" button in Telegram chat bar)
       if (this.webappUrl && this.webappUrl.startsWith('https://')) {
         await this.apiCall('setChatMenuButton', {
           menu_button: {
             type: 'web_app',
-            text: '🎮 O‘ynash',
+            text: '🚀 Boshlash',
             web_app: { url: this.webappUrl },
           },
         });
@@ -87,7 +87,7 @@ export class TelegramBotService {
       this.apiCall('setChatMenuButton', {
         menu_button: {
           type: 'web_app',
-          text: '🎮 O‘ynash',
+          text: '🚀 Boshlash',
           web_app: { url: this.webappUrl },
         },
       }).catch((e) => console.warn('setChatMenuButton error:', e));
@@ -149,7 +149,7 @@ export class TelegramBotService {
   }
 
   private getAppUrl(param?: string): string {
-    const base = this.webappUrl || 'https://my-game001-bot.loca.lt';
+    const base = this.webappUrl || 'https://resulting-llc-describing-offered.trycloudflare.com';
     if (!param) return base;
     return base.includes('?') ? `${base}&startapp=${param}` : `${base}?startapp=${param}`;
   }
@@ -158,38 +158,15 @@ export class TelegramBotService {
     const webAppUrl = this.getAppUrl(startParam);
 
     const message = `🎮 <b>Assalomu alaykum, ${firstName}!</b>\n\n` +
-      `<b>"MY Game" Telegram Mini-O‘yinlar Portali</b>ga xush kelibsiz! 🚀\n\n` +
-      `Bu yerda siz <b>9 xil qiziqarli o‘yin</b>da do‘stlaringiz bilan (1v1 PvP) yoki aqlli botga qarshi bellashishingiz, ELO reytingingizni oshirishingiz va tangalar to‘plashingiz mumkin.\n\n` +
-      `🏆 <b>Mavjud o‘yinlar:</b>\n` +
-      `♟️ <b>Shaxmat</b> — Taktik FIDE qoidalari & Minimax AI\n` +
-      `⚪ <b>Shashka</b> — Klassik 8x8 maydon\n` +
-      `🎯 <b>Knife Hit</b> — 5 bosqichli realistik pichoq uloqtirish\n` +
-      `🌲 <b>Timberjack</b> — Daraxt kesish & shoxlardan qochish\n` +
-      `🔢 <b>2048</b> — Mantiqiy puzzle\n` +
-      `🐍 <b>Snake</b> — Klassik iloncha sarguzashti\n` +
-      `❌ <b>Tic-Tac-Toe</b> — 1v1 tezkor duel\n` +
-      `🏗️ <b>Tower Blocks</b> — Baland minora qurish\n` +
-      `➕ <b>Math Battle</b> — Arifmetik tezlik bellashuvi\n\n` +
-      `👇 <i>O‘yinni boshlash uchun quyidagi tugmani bosing:</i>`;
+      `<b>"MY Game" Mini-O‘yinlar Portali</b>ga xush kelibsiz! 🕹️\n\n` +
+      `O‘yinlarni boshlash uchun quyidagi tugmani bosing 👇`;
 
-    const replyMarkup: any = {
+    const replyMarkup = {
       inline_keyboard: [
         [
           {
-            text: '🎮 O‘yinlar portalini ochish',
+            text: '🚀 Boshlash',
             web_app: { url: webAppUrl },
-          },
-        ],
-        [
-          {
-            text: '👥 Do‘stlarni taklif qilish',
-            url: `https://t.me/share/url?url=https://t.me/${this.botUsername}?startapp=ref_${chatId}&text=Men%20bilan%20Telegram%20o%E2%80%98yinlarida%20bellashing!`,
-          },
-        ],
-        [
-          {
-            text: '🕹️ 9 ta o‘yinlar ro‘yxati',
-            callback_data: 'show_games',
           },
         ],
       ],
@@ -257,14 +234,14 @@ export class TelegramBotService {
   private async sendDefaultResponse(chatId: number, firstName: string) {
     const webAppUrl = this.getAppUrl();
 
-    const message = `Salom, <b>${firstName}</b>! 👋\n` +
-      `O‘yinlarni boshlash uchun quyidagi tugmani bosing yoki /start buyrug‘ini yuboring.`;
+    const message = `Salom, <b>${firstName}</b>! 👋\n\n` +
+      `O‘yinlar portalini ochish uchun <b>«🚀 Boshlash»</b> tugmasini bosing 👇`;
 
     const replyMarkup = {
       inline_keyboard: [
         [
           {
-            text: '🎮 O‘yinlarni boshlash',
+            text: '🚀 Boshlash',
             web_app: { url: webAppUrl },
           },
         ],
