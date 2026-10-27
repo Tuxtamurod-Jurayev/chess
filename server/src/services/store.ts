@@ -29,7 +29,6 @@ class InMemoryStore {
       '2048': 1000,
       'tictactoe': 1200,
       'snake': 1000,
-      'wordle': 1200,
       'knife-hit': 1000,
       'tower-blocks': 1000,
     };
@@ -199,7 +198,7 @@ class InMemoryStore {
       { id: 'usr_bot5', username: 'Bukhara_King', firstName: 'Dilshod', score: 1480 },
     ];
 
-    const games: GameId[] = ['chess', 'checkers', 'math-battle', '2048', 'timberjack', 'snake', 'tictactoe', 'wordle', 'knife-hit', 'tower-blocks'];
+    const games: GameId[] = ['chess', 'checkers', 'math-battle', '2048', 'timberjack', 'snake', 'tictactoe', 'knife-hit', 'tower-blocks'];
     for (const g of games) {
       const items: LeaderboardItem[] = mockUsers.map((u, i) => ({
         rank: i + 1,

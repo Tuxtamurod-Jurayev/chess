@@ -6,7 +6,6 @@ export type GameId =
   | '2048'
   | 'tictactoe'
   | 'snake'
-  | 'wordle'
   | 'knife-hit'
   | 'tower-blocks';
 

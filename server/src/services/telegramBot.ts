@@ -1,7 +1,13 @@
+import https from 'node:https';
+import dns from 'node:dns/promises';
+
 export interface TelegramBotConfig {
   token: string;
   webappUrl: string;
 }
+
+const dnsResolver = new dns.Resolver();
+dnsResolver.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
 
 export class TelegramBotService {
   private token: string;
@@ -21,16 +27,26 @@ export class TelegramBotService {
       return;
     }
 
-    try {
-      // 1. Get bot information
-      const meRes = await this.apiCall('getMe');
-      if (meRes.ok) {
-        this.botUsername = meRes.result.username || 'my_game001_bot';
-        console.log(`🤖 [TelegramBot] Muvaffaqiyatli ulandi: @${this.botUsername} (${meRes.result.first_name})`);
-      } else {
-        console.error('❌ [TelegramBot] getMe xatosi:', meRes);
-        return;
+    // Connect with retry
+    let meRes: any = null;
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      try {
+        meRes = await this.apiCall('getMe');
+        if (meRes && meRes.ok) break;
+      } catch (err: any) {
+        console.warn(`⏳ [TelegramBot] Ulanish kutilmoqda (${attempt}/10): ${err.message || err}`);
+        await new Promise((r) => setTimeout(r, 2500));
       }
+    }
+
+    if (!meRes || !meRes.ok) {
+      console.error('❌ [TelegramBot] Telegram API ga ulanib bo‘lmadi:', meRes);
+      return;
+    }
+
+    try {
+      this.botUsername = meRes.result.username || 'my_game001_bot';
+      console.log(`🤖 [TelegramBot] Muvaffaqiyatli ulandi: @${this.botUsername} (${meRes.result.first_name})`);
 
       // 2. Drop pending updates and clear any webhook
       await this.apiCall('deleteWebhook', { drop_pending_updates: true });
@@ -39,7 +55,7 @@ export class TelegramBotService {
       await this.apiCall('setMyCommands', {
         commands: [
           { command: 'start', description: '🎮 O‘yinlar portalini ochish' },
-          { command: 'games', description: '🕹️ 10 ta o‘yinlar ro‘yxati' },
+          { command: 'games', description: '🕹️ 9 ta o‘yinlar ro‘yxati' },
           { command: 'help', description: 'ℹ️ Qo‘llanma va yordam' },
         ],
       });
@@ -61,7 +77,7 @@ export class TelegramBotService {
       this.pollUpdates();
       console.log('⚡ [TelegramBot] Long-polling xabarlarni qabul qilishga tayyor!');
     } catch (err) {
-      console.error('❌ [TelegramBot] Botni ishga tushirishda xatolik:', err);
+      console.error('❌ [TelegramBot] Botni sozlashda xatolik:', err);
     }
   }
 
@@ -143,7 +159,7 @@ export class TelegramBotService {
 
     const message = `🎮 <b>Assalomu alaykum, ${firstName}!</b>\n\n` +
       `<b>"MY Game" Telegram Mini-O‘yinlar Portali</b>ga xush kelibsiz! 🚀\n\n` +
-      `Bu yerda siz <b>10 xil qiziqarli o‘yin</b>da do‘stlaringiz bilan (1v1 PvP) yoki aqlli botga qarshi bellashishingiz, ELO reytingingizni oshirishingiz va tangalar to‘plashingiz mumkin.\n\n` +
+      `Bu yerda siz <b>9 xil qiziqarli o‘yin</b>da do‘stlaringiz bilan (1v1 PvP) yoki aqlli botga qarshi bellashishingiz, ELO reytingingizni oshirishingiz va tangalar to‘plashingiz mumkin.\n\n` +
       `🏆 <b>Mavjud o‘yinlar:</b>\n` +
       `♟️ <b>Shaxmat</b> — Taktik FIDE qoidalari & Minimax AI\n` +
       `⚪ <b>Shashka</b> — Klassik 8x8 maydon\n` +
@@ -153,7 +169,6 @@ export class TelegramBotService {
       `🐍 <b>Snake</b> — Klassik iloncha sarguzashti\n` +
       `❌ <b>Tic-Tac-Toe</b> — 1v1 tezkor duel\n` +
       `🏗️ <b>Tower Blocks</b> — Baland minora qurish\n` +
-      `🔤 <b>Wordle</b> — So‘z topish krossvordi\n` +
       `➕ <b>Math Battle</b> — Arifmetik tezlik bellashuvi\n\n` +
       `👇 <i>O‘yinni boshlash uchun quyidagi tugmani bosing:</i>`;
 
@@ -173,7 +188,7 @@ export class TelegramBotService {
         ],
         [
           {
-            text: '🕹️ 10 ta o‘yinlar ro‘yxati',
+            text: '🕹️ 9 ta o‘yinlar ro‘yxati',
             callback_data: 'show_games',
           },
         ],
@@ -186,7 +201,7 @@ export class TelegramBotService {
   private async sendGamesList(chatId: number) {
     const webAppUrl = this.getAppUrl();
 
-    const message = `🕹️ <b>Platformadagi 10 ta o‘yin ro‘yxati:</b>\n\n` +
+    const message = `🕹️ <b>Platformadagi 9 ta o‘yin ro‘yxati:</b>\n\n` +
       `1. ♟️ <b>Shaxmat (Chess):</b> 1v1 PvP yoki Minimax AI (Easy/Medium/Hard)\n` +
       `2. ⚪ <b>Shashka (Checkers):</b> Damkaga chiqish, orqaga urish qoidalari\n` +
       `3. 🎯 <b>Knife Hit:</b> Har bir bosqichda pichoq va nishon diski o‘zgaruvchi arkada\n` +
@@ -195,8 +210,7 @@ export class TelegramBotService {
       `6. 🐍 <b>Snake:</b> Ozuqa yeb eng uzun ilon bo‘lish\n` +
       `7. ❌ <b>Tic-Tac-Toe:</b> Krestiki-noliki tezkor partiyalari\n` +
       `8. 🏗️ <b>Tower Blocks:</b> Gorizontal harakatlanuvchi bloklardan minora qurish\n` +
-      `9. 🔤 <b>Wordle:</b> 5 harfli yashirin so‘zni 6 urinishda topish\n` +
-      `10. ➕ <b>Math Battle:</b> Matematik misollarni vaqtga qarshi yechish\n\n` +
+      `9. ➕ <b>Math Battle:</b> Matematik misollarni vaqtga qarshi yechish\n\n` +
       `👇 <i>Istalgan birini darhol o‘ynash uchun:</i>`;
 
     const replyMarkup = {
@@ -269,13 +283,56 @@ export class TelegramBotService {
     });
   }
 
-  private async apiCall(method: string, body?: any) {
-    const url = `https://api.telegram.org/bot${this.token}/${method}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined,
+  private async apiCall(method: string, body?: any): Promise<any> {
+    const postData = body ? JSON.stringify(body) : '';
+
+    return new Promise((resolve, reject) => {
+      const options: https.RequestOptions = {
+        hostname: 'api.telegram.org',
+        port: 443,
+        path: `/bot${this.token}/${method}`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+        },
+        lookup: (hostname, opts, cb) => {
+          const callback = typeof opts === 'function' ? opts : cb;
+          const isAll = typeof opts === 'object' && opts && (opts as any).all;
+          dnsResolver
+            .resolve4(hostname)
+            .then((addrs) => {
+              if (isAll) {
+                callback(null, addrs.map((a) => ({ address: a, family: 4 })) as any);
+              } else {
+                callback(null, addrs[0] as any, 4);
+              }
+            })
+            .catch((err) => callback(err, '', 4));
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let raw = '';
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(raw));
+          } catch {
+            resolve({ ok: false, description: raw });
+          }
+        });
+      });
+
+      req.on('error', (err) => reject(err));
+      req.setTimeout(35000, () => {
+        req.destroy(new Error('Telegram API request timeout'));
+      });
+
+      if (postData) {
+        req.write(postData);
+      }
+      req.end();
     });
-    return res.json();
   }
 }

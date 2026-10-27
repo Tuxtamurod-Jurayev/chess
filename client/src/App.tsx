@@ -16,7 +16,6 @@ import { TicTacToeGame } from './games/tictactoe/TicTacToeGame.js';
 import { SnakeGame } from './games/snake/SnakeGame.js';
 import { TimberjackGame } from './games/timberjack/TimberjackGame.js';
 import { KnifeHitGame } from './games/knifeHit/KnifeHitGame.js';
-import { WordleGame } from './games/wordle/WordleGame.js';
 import { TowerBlocksGame } from './games/towerBlocks/TowerBlocksGame.js';
 import { CheckersGame } from './games/checkers/CheckersGame.js';
 
@@ -117,8 +116,6 @@ export const App: React.FC = () => {
         return <TimberjackGame onBack={() => setSelectedGame(null)} />;
       case 'knife-hit':
         return <KnifeHitGame onBack={() => setSelectedGame(null)} />;
-      case 'wordle':
-        return <WordleGame onBack={() => setSelectedGame(null)} />;
       case 'tower-blocks':
         return <TowerBlocksGame onBack={() => setSelectedGame(null)} />;
       case 'checkers':

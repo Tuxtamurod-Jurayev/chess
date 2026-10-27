@@ -380,7 +380,6 @@ export class RoomManager {
         '2048': 1000,
         'tictactoe': 1300,
         'snake': 1000,
-        'wordle': 1200,
         'knife-hit': 1000,
         'tower-blocks': 1000,
       },

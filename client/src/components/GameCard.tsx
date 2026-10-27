@@ -7,12 +7,9 @@ import {
   Grid2x2,
   X,
   Activity,
-  SpellCheck,
   Crosshair,
   Layers,
   Play,
-  Users,
-  Clock,
 } from 'lucide-react';
 import type { GameMetadata } from '../types.js';
 import { tg } from '../services/telegram.js';
@@ -33,7 +30,6 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
       case 'Grid2x2': return <Grid2x2 {...props} />;
       case 'X': return <X {...props} />;
       case 'Activity': return <Activity {...props} />;
-      case 'SpellCheck': return <SpellCheck {...props} />;
       case 'Crosshair': return <Crosshair {...props} />;
       case 'Layers': return <Layers {...props} />;
       default: return <Crown {...props} />;
@@ -72,7 +68,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
           {getIcon()}
         </div>
 
-        {/* Info */}
+        {/* Clean Info (No cut-off description or subtitle tags) */}
         <div className="min-w-0">
           <div className="flex items-center space-x-2">
             <h3 className="text-sm font-bold text-white tracking-tight truncate group-hover:text-zinc-100">
@@ -90,26 +86,6 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
                 {game.badge}
               </span>
             )}
-          </div>
-          <p className="text-xs text-zinc-400 truncate mt-0.5">
-            {game.descriptionUz}
-          </p>
-
-          <div className="flex items-center space-x-3 mt-1.5 text-[10px] text-zinc-400 font-mono">
-            <span className="flex items-center gap-1">
-              <Users size={11} className="text-zinc-400" />
-              {game.isMultiplayer ? '1v1 PvP' : 'Solo'}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock size={11} className="text-zinc-400" />
-              {game.avgDuration}
-            </span>
-            <span
-              className="font-medium"
-              style={{ color: game.accentColor }}
-            >
-              {game.difficulty}
-            </span>
           </div>
         </div>
       </div>

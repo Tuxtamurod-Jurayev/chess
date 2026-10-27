@@ -107,21 +107,6 @@ export const ALL_GAMES: GameMetadata[] = [
     accentColor: '#22c55e', // emerald
   },
   {
-    id: 'wordle',
-    title: 'Wordle',
-    titleUz: 'So‘z Topish',
-    category: 'puzzle',
-    descriptionUz: '5 harfli yashirin so‘zni 6 urinishda toping (O‘zbek / Rus / Ingliz).',
-    icon: 'SpellCheck',
-    badge: 'Kunlik',
-    isMultiplayer: true,
-    minPlayers: 1,
-    maxPlayers: 2,
-    avgDuration: '3 daq',
-    difficulty: 'O‘rtacha',
-    accentColor: '#06b6d4', // cyan
-  },
-  {
     id: 'knife-hit',
     title: 'Knife Hit',
     titleUz: 'Pichoq Uloqtirish',

@@ -128,7 +128,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         for (const angle of state.targetKnives) {
           ctx.save();
           ctx.rotate(angle);
-          drawRealisticKnife(ctx, 0, radius, currentTheme.discType);
+          drawRealisticKnife(ctx, 0, radius - 8, currentTheme.discType);
           ctx.restore();
         }
 
@@ -144,7 +144,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         drawRealisticKnife(ctx, 0, 0, currentTheme.discType);
         ctx.restore();
 
-        if (state.flyingKnife.y <= centerY + radius + 8 && !state.shattering) {
+        if (state.flyingKnife.y <= centerY + radius + 4 && !state.shattering) {
           const currentRelAngle = -state.rotation + Math.PI / 2;
           const normalizedAngle = ((currentRelAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
@@ -398,7 +398,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }
 
-  // Realistic Knife Model
+  // Realistic Knife Model (Tip pointing forward/UP at y=0, handle at bottom y>0)
   function drawRealisticKnife(ctx: CanvasRenderingContext2D, x: number, y: number, theme: StageTheme['discType']) {
     ctx.save();
     ctx.translate(x, y);
@@ -426,47 +426,47 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       guardColor = '#eab308';
     }
 
-    // Blade
+    // Blade (Sharp tip pointing forward/UP at (0, 0))
     ctx.beginPath();
-    ctx.moveTo(-2.5, 0);
-    ctx.lineTo(2.5, 0);
-    ctx.lineTo(2.5, 24);
-    ctx.lineTo(0, 32); // sharp tip
-    ctx.lineTo(-2.5, 24);
+    ctx.moveTo(0, 0); // sharp tip
+    ctx.lineTo(3.5, 8);
+    ctx.lineTo(3, 26);
+    ctx.lineTo(-3, 26);
+    ctx.lineTo(-3.5, 8);
     ctx.closePath();
     ctx.fillStyle = bladeColor;
     ctx.fill();
 
-    // Blade metallic shine centerline
+    // Metallic centerline shine
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, 30);
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.moveTo(0, 2);
+    ctx.lineTo(0, 26);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     // Crossguard
     ctx.fillStyle = guardColor;
-    ctx.fillRect(-6, 0, 12, 3.5);
+    ctx.fillRect(-7, 26, 14, 4);
 
     // Handle Grip
     ctx.fillStyle = handleColor;
-    ctx.fillRect(-3, -16, 6, 16);
+    ctx.fillRect(-3, 30, 6, 18);
 
     // Grip rings
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
     ctx.lineWidth = 1;
-    for (let r = -13; r <= -4; r += 3) {
+    for (let r = 33; r <= 45; r += 3) {
       ctx.beginPath();
       ctx.moveTo(-3, r);
       ctx.lineTo(3, r);
       ctx.stroke();
     }
 
-    // Pommel
+    // Pommel (end of handle)
     ctx.fillStyle = guardColor;
     ctx.beginPath();
-    ctx.arc(0, -17.5, 3.5, 0, Math.PI * 2);
+    ctx.arc(0, 50, 4, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
