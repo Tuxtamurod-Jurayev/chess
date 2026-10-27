@@ -1,18 +1,8 @@
 import React from 'react';
-import {
-  Crown,
-  CircleDot,
-  Calculator,
-  Axe,
-  Grid2x2,
-  X,
-  Activity,
-  Crosshair,
-  Layers,
-  Play,
-} from 'lucide-react';
+import { Play } from 'lucide-react';
 import type { GameMetadata } from '../types.js';
 import { tg } from '../services/telegram.js';
+import { GameIcon } from './GameIcons.js';
 
 interface GameCardProps {
   game: GameMetadata;
@@ -20,22 +10,6 @@ interface GameCardProps {
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
-  const getIcon = () => {
-    const props = { size: 22, className: 'text-white' };
-    switch (game.icon) {
-      case 'Crown': return <Crown {...props} />;
-      case 'CircleDot': return <CircleDot {...props} />;
-      case 'Calculator': return <Calculator {...props} />;
-      case 'Axe': return <Axe {...props} />;
-      case 'Grid2x2': return <Grid2x2 {...props} />;
-      case 'X': return <X {...props} />;
-      case 'Activity': return <Activity {...props} />;
-      case 'Crosshair': return <Crosshair {...props} />;
-      case 'Layers': return <Layers {...props} />;
-      default: return <Crown {...props} />;
-    }
-  };
-
   const handleCardClick = () => {
     tg.haptic('light');
     onSelect(game);
@@ -57,18 +31,19 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
       />
 
       <div className="flex items-center space-x-3.5 min-w-0 pl-1.5">
-        {/* Vibrant Icon Box */}
+        {/* Vibrant Vector Icon Box */}
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-200 group-hover:scale-105"
+          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-200 group-hover:scale-105 p-1.5"
           style={{
-            background: `linear-gradient(135deg, ${game.accentColor}dd, ${game.accentColor}66)`,
-            boxShadow: `0 4px 14px ${game.accentColor}33`,
+            background: `linear-gradient(135deg, ${game.accentColor}33, #18181b)`,
+            border: `1px solid ${game.accentColor}55`,
+            boxShadow: `0 4px 14px ${game.accentColor}25`,
           }}
         >
-          {getIcon()}
+          <GameIcon id={game.id} size={30} />
         </div>
 
-        {/* Clean Info - Only Title */}
+        {/* Clean Info - Title */}
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-white tracking-tight truncate group-hover:text-zinc-100">
             {game.titleUz}

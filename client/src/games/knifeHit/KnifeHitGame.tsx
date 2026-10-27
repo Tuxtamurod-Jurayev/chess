@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Zap, Sparkles } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Zap } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -19,7 +19,7 @@ const STAGE_THEMES: StageTheme[] = [
     knifeName: 'Ovchi Pichog‘i',
     discType: 'wood',
     targetColor: '#78350f',
-    particleColor: ['#b45309', '#d97706', '#fef3c7'],
+    particleColor: ['#b45309', '#d97706', '#fef3c7', '#78350f'],
   },
   {
     name: 'Tarvuz (Meva)',
@@ -33,21 +33,21 @@ const STAGE_THEMES: StageTheme[] = [
     knifeName: 'Ritsar Xanjari',
     discType: 'shield',
     targetColor: '#334155',
-    particleColor: ['#94a3b8', '#f8fafc', '#fbbf24'],
+    particleColor: ['#94a3b8', '#f8fafc', '#fbbf24', '#cbd5e1'],
   },
   {
     name: 'Kiber Reaktor',
     knifeName: 'Plazma Kiber-Pichoq',
     discType: 'cyber',
     targetColor: '#0f172a',
-    particleColor: ['#06b6d4', '#3b82f6', '#a855f7'],
+    particleColor: ['#06b6d4', '#3b82f6', '#a855f7', '#22d3ee'],
   },
   {
     name: 'Oltin Qirollik',
     knifeName: 'Zarhal Xanjar',
     discType: 'gold',
     targetColor: '#ca8a04',
-    particleColor: ['#facc15', '#fef08a', '#e11d48'],
+    particleColor: ['#facc15', '#fef08a', '#e11d48', '#ca8a04'],
   },
 ];
 
@@ -67,6 +67,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     speed: 0.035,
     targetKnives: [] as number[],
     flyingKnife: null as { y: number } | null,
+    deflectingKnife: null as { x: number; y: number; vx: number; vy: number; rot: number; vrot: number } | null,
     gameOver: false,
     recoil: 0,
     shattering: false,
@@ -85,8 +86,9 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const centerX = canvas.width / 2;
-      const centerY = 125;
+      const centerY = 130;
       const radius = 54;
+      const embedDepth = 12; // Knife penetrates 12px into the rim
 
       const state = gameStateRef.current;
       if (!state.gameOver) {
@@ -124,61 +126,103 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
         drawRealisticDisc(ctx, currentTheme.discType, radius);
 
-        // Draw Embedded Knives
+        // Draw Embedded Knives sticking radially out from rim
         for (const angle of state.targetKnives) {
           ctx.save();
           ctx.rotate(angle);
-          drawRealisticKnife(ctx, 0, radius - 8, currentTheme.discType);
+          // Embedded at (0, radius - embedDepth), tip penetrates into rim, handle sticks outward
+          drawRealisticKnife(ctx, 0, radius - embedDepth, currentTheme.discType);
           ctx.restore();
         }
 
         ctx.restore();
       }
 
+      // Draw Deflecting Knife on Clash
+      if (state.deflectingKnife) {
+        const d = state.deflectingKnife;
+        d.x += d.vx;
+        d.y += d.vy;
+        d.vy += 0.5;
+        d.rot += d.vrot;
+
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rot);
+        drawRealisticKnife(ctx, 0, 0, currentTheme.discType);
+        ctx.restore();
+      }
+
       // Draw Flying Knife
       if (state.flyingKnife) {
-        state.flyingKnife.y -= 22;
+        state.flyingKnife.y -= 24;
 
         ctx.save();
         ctx.translate(centerX, state.flyingKnife.y);
         drawRealisticKnife(ctx, 0, 0, currentTheme.discType);
         ctx.restore();
 
-        if (state.flyingKnife.y <= centerY + radius + 4 && !state.shattering) {
-          const currentRelAngle = -state.rotation + Math.PI / 2;
-          const normalizedAngle = ((currentRelAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        // Exact collision at bottom point of the circle (y = centerY + radius)
+        const hitThreshold = centerY + radius + embedDepth;
+        if (state.flyingKnife.y <= hitThreshold && !state.shattering && !state.deflectingKnife) {
+          // Angle of impact: bottom of the disc is at angle 0 in world coords.
+          // In rotating disc coords, angle = -state.rotation.
+          const hitAngle = -state.rotation;
 
+          // Check if it strikes an existing knife
           const hitExisting = state.targetKnives.some((existingAngle) => {
-            const normExisting = ((existingAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-            const diff = Math.abs(normExisting - normalizedAngle);
-            return diff < 0.22 || Math.abs(diff - Math.PI * 2) < 0.22;
+            const diff = Math.abs(((existingAngle - hitAngle) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+            return diff < 0.26; // Angular width of knife
           });
 
           if (hitExisting) {
             tg.haptic('error');
             state.gameOver = true;
+            state.deflectingKnife = {
+              x: centerX,
+              y: centerY + radius,
+              vx: (Math.random() > 0.5 ? 5 : -5),
+              vy: 3,
+              rot: 0.2,
+              vrot: 0.25,
+            };
             state.flyingKnife = null;
+
+            // Clash sparks
+            for (let i = 0; i < 15; i++) {
+              state.particles.push({
+                x: centerX,
+                y: centerY + radius + 15,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 8,
+                life: 1,
+                color: '#facc15',
+                size: Math.random() * 3 + 2,
+              });
+            }
+
             setGameOver(true);
             if (user) {
               api.finishSoloGame(user.id, 'knife-hit', score).catch(() => {});
             }
           } else {
+            // Clean stick into disc
             tg.haptic('medium');
-            state.targetKnives.push(currentRelAngle);
+            state.targetKnives.push(hitAngle);
             state.flyingKnife = null;
-            state.recoil = 6;
+            state.recoil = 7;
 
             // Spawn realistic particles based on disc theme
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 14; i++) {
               const pColor = currentTheme.particleColor[Math.floor(Math.random() * currentTheme.particleColor.length)];
               state.particles.push({
-                x: centerX,
+                x: centerX + (Math.random() - 0.5) * 10,
                 y: centerY + radius,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.7) * 7,
+                vx: (Math.random() - 0.5) * 9,
+                vy: (Math.random() - 0.7) * 8,
                 life: 1,
                 color: pColor,
-                size: Math.random() * 3 + 1.5,
+                size: Math.random() * 3.5 + 1.5,
               });
             }
 
@@ -190,14 +234,14 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 // Trigger Stage Shatter Effect!
                 confetti({ particleCount: 50, spread: 70 });
                 state.shattering = true;
-                for (let i = 0; i < 16; i++) {
+                for (let i = 0; i < 18; i++) {
                   state.shatterPieces.push({
                     x: centerX,
                     y: centerY,
-                    vx: (Math.random() - 0.5) * 12,
-                    vy: (Math.random() - 0.8) * 10,
+                    vx: (Math.random() - 0.5) * 13,
+                    vy: (Math.random() - 0.8) * 11,
                     rot: 0,
-                    vrot: (Math.random() - 0.5) * 0.2,
+                    vrot: (Math.random() - 0.5) * 0.25,
                     r: Math.random() * 12 + 6,
                     color: currentTheme.particleColor[i % currentTheme.particleColor.length],
                   });
@@ -213,7 +257,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   state.shattering = false;
                   state.shatterPieces = [];
                   state.targetKnives = [];
-                  state.speed = (Math.random() > 0.45 ? 1 : -1) * (0.035 + nextStage * 0.006);
+                  state.speed = (Math.random() > 0.45 ? 1 : -1) * (0.035 + nextStage * 0.005);
                 }, 900);
 
                 return 7 + Math.min(nextStage, 5);
@@ -230,7 +274,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         p.x += p.vx;
         p.y += p.vy;
         p.vy += 0.25;
-        p.life -= 0.04;
+        p.life -= 0.045;
 
         if (p.life <= 0) {
           state.particles.splice(i, 1);
@@ -245,10 +289,10 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
       }
 
-      // Draw Ready Knife at bottom with glowing hint
+      // Draw Ready Knife at bottom
       if (!state.flyingKnife && !state.gameOver) {
         ctx.save();
-        ctx.translate(centerX, canvas.height - 68);
+        ctx.translate(centerX, canvas.height - 65);
         drawRealisticKnife(ctx, 0, 0, currentTheme.discType);
         ctx.restore();
       }
@@ -281,7 +325,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         ctx.stroke();
       }
       ctx.beginPath();
-      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
       ctx.fillStyle = '#451a03';
       ctx.fill();
     } else if (type === 'fruit') {
@@ -398,12 +442,11 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }
 
-  // Realistic Knife Model (Tip pointing forward/UP at y=0, handle at bottom y>0)
+  // Realistic Knife Model (Tip pointing UP at (0, 0), handle at bottom y > 0)
   function drawRealisticKnife(ctx: CanvasRenderingContext2D, x: number, y: number, theme: StageTheme['discType']) {
     ctx.save();
     ctx.translate(x, y);
 
-    // Color definitions based on stage knife
     let bladeColor = '#f1f5f9';
     let handleColor = '#78350f';
     let guardColor = '#64748b';
@@ -426,12 +469,12 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       guardColor = '#eab308';
     }
 
-    // Blade (Sharp tip pointing forward/UP at (0, 0))
+    // Blade (Tip at (0,0), expanding to (±3.5, 8), base at (±3, 24))
     ctx.beginPath();
     ctx.moveTo(0, 0); // sharp tip
     ctx.lineTo(3.5, 8);
-    ctx.lineTo(3, 26);
-    ctx.lineTo(-3, 26);
+    ctx.lineTo(3, 24);
+    ctx.lineTo(-3, 24);
     ctx.lineTo(-3.5, 8);
     ctx.closePath();
     ctx.fillStyle = bladeColor;
@@ -440,146 +483,131 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     // Metallic centerline shine
     ctx.beginPath();
     ctx.moveTo(0, 2);
-    ctx.lineTo(0, 26);
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineTo(0, 24);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     // Crossguard
     ctx.fillStyle = guardColor;
-    ctx.fillRect(-7, 26, 14, 4);
+    ctx.fillRect(-6.5, 24, 13, 3.5);
 
     // Handle Grip
     ctx.fillStyle = handleColor;
-    ctx.fillRect(-3, 30, 6, 18);
-
-    // Grip rings
-    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-    ctx.lineWidth = 1;
-    for (let r = 33; r <= 45; r += 3) {
-      ctx.beginPath();
-      ctx.moveTo(-3, r);
-      ctx.lineTo(3, r);
-      ctx.stroke();
-    }
+    ctx.fillRect(-2.5, 27.5, 5, 16);
 
     // Pommel (end of handle)
     ctx.fillStyle = guardColor;
     ctx.beginPath();
-    ctx.arc(0, 50, 4, 0, Math.PI * 2);
+    ctx.arc(0, 45.5, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
   const throwKnife = () => {
-    if (gameOver || gameStateRef.current.flyingKnife || gameStateRef.current.shattering) return;
+    if (gameOver || gameStateRef.current.flyingKnife || gameStateRef.current.shattering || gameStateRef.current.deflectingKnife) return;
     tg.haptic('light');
-    gameStateRef.current.flyingKnife = { y: 280 };
+    gameStateRef.current.flyingKnife = { y: 285 };
   };
 
   const restart = () => {
     tg.haptic('medium');
+    setScore(0);
+    setStage(1);
+    setKnivesLeft(7);
+    setGameOver(false);
+    setStageClearedTitle(null);
     gameStateRef.current = {
       rotation: 0,
       speed: 0.035,
       targetKnives: [],
       flyingKnife: null,
+      deflectingKnife: null,
       gameOver: false,
       recoil: 0,
       shattering: false,
       shatterPieces: [],
       particles: [],
     };
-    setKnivesLeft(7);
-    setScore(0);
-    setStage(1);
-    setGameOver(false);
-    setStageClearedTitle(null);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
-      {/* Header */}
-      <div className="bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
+      {/* Top Header */}
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
         <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
           <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-xs font-bold text-white flex items-center justify-center gap-1.5">
-            <span className="text-amber-400">STAGE {stage}:</span>
-            <span>{currentTheme.name}</span>
-          </h2>
-          <span className="text-[10px] text-zinc-400 font-mono">
-            Pichoq: <span className="text-zinc-200">{currentTheme.knifeName}</span> | Ball: {score}
-          </span>
+          <div className="flex items-center justify-center space-x-1.5">
+            <Zap size={14} className="text-amber-400 fill-amber-400" />
+            <h2 className="text-xs font-semibold text-zinc-100">Bosqich {stage}</h2>
+          </div>
+          <span className="text-[10px] text-zinc-500 font-mono">Ball: {score}</span>
         </div>
         <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
           <RotateCcw size={16} />
         </button>
       </div>
 
-      <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Game Area Container */}
-        <div
-          onClick={throwKnife}
-          className="relative aspect-[3/4] w-full bg-gradient-to-b from-zinc-900 via-zinc-900/90 to-zinc-950 border-2 border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col items-center justify-center cursor-pointer"
-        >
-          <canvas ref={canvasRef} width={340} height={380} className="w-full h-full" />
-
-          {/* Knives left indicator in corner */}
-          <div className="absolute top-4 left-4 flex flex-col space-y-1 z-20">
-            {Array.from({ length: knivesLeft }).map((_, i) => (
-              <div
-                key={i}
-                className="w-1.5 h-4 bg-amber-400 rounded-full shadow-xs"
-              />
-            ))}
+      {/* Main Interactive Arena (tap anywhere on stage to throw) */}
+      <div
+        style={{ touchAction: 'none' }}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          throwKnife();
+        }}
+        className="flex-1 flex flex-col items-center justify-center p-3 relative cursor-pointer"
+      >
+        {/* Stage Clear Banner */}
+        {stageClearedTitle && (
+          <div className="absolute top-8 z-20 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold font-mono tracking-wider animate-bounce shadow-lg">
+            🎉 {stageClearedTitle}
           </div>
+        )}
 
-          {/* Stage Cleared Banner overlay */}
-          {stageClearedTitle && (
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center z-30 animate-pop">
-              <Sparkles size={36} className="text-amber-400 mb-2 animate-spin" />
-              <h3 className="text-lg font-black text-white tracking-wider mb-1">
-                {stageClearedTitle}
-              </h3>
-              <span className="text-xs text-amber-300 font-mono">Yangi nishon va pichoq ochildi!</span>
-            </div>
-          )}
+        {/* Knife Hit Canvas */}
+        <canvas
+          ref={canvasRef}
+          width={320}
+          height={380}
+          className="rounded-2xl border border-zinc-800/60 bg-gradient-to-b from-zinc-900/60 to-zinc-950/90 shadow-2xl"
+        />
 
-          {/* Game Over modal */}
-          {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-5 text-center animate-fade-in z-30">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-2">
-                <Zap size={24} />
-              </div>
-              <h3 className="text-lg font-black text-white mb-1">Pichoq bir-biriga tegdi!</h3>
-              <p className="text-xs text-zinc-400 mb-4 font-mono">
-                Bosqich: <span className="text-white font-bold">{stage}</span> | Yakuniy ball:{' '}
-                <span className="text-amber-400 font-bold">{score}</span>
-              </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  restart();
-                }}
-                className="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-orange-500/25 active:scale-95"
-              >
-                Qayta boshlash
-              </button>
-            </div>
-          )}
+        {/* Knives Ammo Counter Bar */}
+        <div className="flex items-center justify-center space-x-1.5 mt-3 pointer-events-none">
+          {Array.from({ length: knivesLeft }).map((_, i) => (
+            <div
+              key={i}
+              className="w-2.5 h-6 rounded-xs bg-gradient-to-t from-orange-600 to-amber-400 shadow-xs border border-orange-700/50"
+            />
+          ))}
         </div>
 
-        {/* Action Throw Button */}
-        <button
-          onClick={throwKnife}
-          disabled={gameOver}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-slate-950 font-black text-sm shadow-xl shadow-orange-500/25 active:scale-95 transition-all mt-4 tracking-wider flex items-center justify-center space-x-2"
-        >
-          <span>PICHOQ OTISH (TAP)</span>
-        </button>
+        {/* Tap guide */}
+        <p className="text-[11px] text-zinc-500 mt-2 font-mono pointer-events-none">
+          Pichoq otish uchun ekranni bosing 👆
+        </p>
+
+        {/* Game Over Modal */}
+        {gameOver && (
+          <div
+            onPointerDown={(e) => e.stopPropagation()}
+            className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30"
+          >
+            <h3 className="text-xl font-black text-white mb-1">O‘yin tugadi!</h3>
+            <p className="text-xs text-zinc-400 mb-4 font-mono">
+              To‘plangan ball: <span className="text-amber-400 font-bold">{score}</span>
+            </p>
+            <button
+              onClick={restart}
+              className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs shadow-md active:scale-95"
+            >
+              Qayta boshlash
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

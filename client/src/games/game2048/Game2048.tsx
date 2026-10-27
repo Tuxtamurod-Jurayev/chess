@@ -23,7 +23,8 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
 
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const arenaRef = useRef<HTMLDivElement | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Initial 4x4 board with 2 random tiles
   function createInitialBoard(): Board {
@@ -51,7 +52,7 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return true;
   }
 
-  // Pure 1D line slider: slides line to the left, merges identical adjacent tiles
+  // Pure 1D line slider
   function slideLine(line: number[]): { newLine: number[]; addedScore: number; changed: boolean } {
     const nonZero = line.filter((v) => v !== 0);
     const result: number[] = [];
@@ -144,14 +145,12 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           } catch {}
         }
 
-        // Check if 2048 achieved
         if (!won && newBoard.some((row) => row.some((v) => v === 2048))) {
           setWon(true);
           confetti({ particleCount: 70, spread: 70 });
           tg.haptic('success');
         }
 
-        // Check game over
         if (checkGameOver(newBoard)) {
           setGameOver(true);
           tg.haptic('error');
@@ -175,6 +174,23 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return true;
   }
 
+  // Prevent scroll during swiping on mobile
+  useEffect(() => {
+    const el = arenaRef.current;
+    if (!el) return;
+
+    const preventTouch = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchmove', preventTouch, { passive: false });
+    return () => {
+      el.removeEventListener('touchmove', preventTouch);
+    };
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -196,29 +212,24 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleMove]);
 
-  // Touch / Swipe handling with touch-action: none
-  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    touchStartRef.current = { x: clientX, y: clientY };
+  // Unified Pointer & Touch Gesture Handling
+  const handlePointerDown = (clientX: number, clientY: number) => {
+    touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
   };
 
-  const handleTouchEnd = (e: React.TouchEvent | React.MouseEvent) => {
+  const handlePointerUp = (clientX: number, clientY: number) => {
     if (!touchStartRef.current) return;
-    const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
-    const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
-
     const dx = clientX - touchStartRef.current.x;
     const dy = clientY - touchStartRef.current.y;
     touchStartRef.current = null;
 
-    const minSwipe = 24;
+    const minSwipeDist = 18; // Short, responsive swipe threshold
     if (Math.abs(dx) > Math.abs(dy)) {
-      if (Math.abs(dx) >= minSwipe) {
+      if (Math.abs(dx) >= minSwipeDist) {
         handleMove(dx > 0 ? 'right' : 'left');
       }
     } else {
-      if (Math.abs(dy) >= minSwipe) {
+      if (Math.abs(dy) >= minSwipeDist) {
         handleMove(dy > 0 ? 'down' : 'up');
       }
     }
@@ -312,17 +323,28 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </button>
       </div>
 
-      {/* Main Game Arena */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        {/* 4x4 Grid Container with touch-action: none */}
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleTouchStart}
-          onMouseUp={handleTouchEnd}
-          style={{ touchAction: 'none' }}
-          className="relative w-full max-w-[340px] aspect-square bg-zinc-900/90 border-2 border-zinc-800/90 rounded-2xl p-2.5 shadow-2xl backdrop-blur-md cursor-grab active:cursor-grabbing"
-        >
+      {/* Main Game Arena - Swipe anywhere in this area */}
+      <div
+        ref={arenaRef}
+        style={{ touchAction: 'none' }}
+        onTouchStart={(e) => {
+          handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+        }}
+        onTouchEnd={(e) => {
+          if (e.changedTouches.length > 0) {
+            handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          }
+        }}
+        onPointerDown={(e) => {
+          handlePointerDown(e.clientX, e.clientY);
+        }}
+        onPointerUp={(e) => {
+          handlePointerUp(e.clientX, e.clientY);
+        }}
+        className="flex-1 flex flex-col items-center justify-center p-4 cursor-grab active:cursor-grabbing relative"
+      >
+        {/* 4x4 Grid Container */}
+        <div className="relative w-full max-w-[340px] aspect-square bg-zinc-900/90 border-2 border-zinc-800/90 rounded-2xl p-2.5 shadow-2xl backdrop-blur-md">
           <div className="grid grid-cols-4 grid-rows-4 gap-2 w-full h-full">
             {board.map((row, r) =>
               row.map((val, c) => {
@@ -338,8 +360,14 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   >
                     {val > 0 && (
                       <span
-                        className={`font-mono font-bold leading-none ${
-                          val >= 1024 ? 'text-lg sm:text-xl' : val >= 128 ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'
+                        className={`font-mono font-bold select-none ${
+                          val < 100
+                            ? 'text-2xl'
+                            : val < 1000
+                            ? 'text-xl'
+                            : val < 10000
+                            ? 'text-base'
+                            : 'text-xs'
                         }`}
                       >
                         {val}
@@ -353,59 +381,74 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
           {/* Game Over Overlay */}
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center p-4 text-center z-30 animate-fade-in">
-              <h3 className="text-lg font-bold text-white mb-1">O‘yin tugadi! 🎮</h3>
-              <p className="text-xs text-zinc-400 mb-4 font-mono">To‘plangan ball: {score}</p>
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center p-4 text-center z-20 animate-fade-in">
+              <h3 className="text-2xl font-black text-white mb-1">O‘yin tugadi!</h3>
+              <p className="text-xs text-zinc-400 mb-4 font-mono">
+                Oxirgi ball: <span className="text-amber-400 font-bold">{score}</span>
+              </p>
               <button
                 onClick={resetGame}
-                className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-zinc-950 font-bold text-xs shadow-lg active:scale-95 transition-all"
+                className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs shadow-md active:scale-95"
               >
-                Qaytadan o‘ynash
+                Qayta boshlash
               </button>
             </div>
           )}
 
-          {/* 2048 Won Overlay */}
+          {/* 2048 Won Notification banner */}
           {won && !gameOver && (
-            <div className="absolute top-2 left-2 right-2 bg-amber-500/90 text-zinc-950 font-bold text-xs py-1.5 px-3 rounded-lg text-center shadow-lg z-20">
-              🎉 Tabriklaymiz! 2048 ga yetdingiz! O‘yinni davom ettirishingiz mumkin.
+            <div className="absolute top-2 left-2 right-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold text-xs py-1.5 px-3 rounded-lg text-center shadow-lg animate-bounce z-10 font-mono">
+              🏆 2048 ga erishildi! Davom eting!
             </div>
           )}
         </div>
 
         {/* Swipe Hint */}
         <p className="text-[11px] text-zinc-500 mt-3 font-mono">
-          Ekranni istalgan tomonga suring yoki tugmalardan foydalaning
+          Ekranni istalgan tomonga suring (Swipe) 👆
         </p>
 
-        {/* Convenient Thumb D-Pad Controls */}
-        <div className="mt-3 flex flex-col items-center">
+        {/* Tactile D-Pad Controls for accessibility & quick tapping */}
+        <div className="grid grid-cols-3 gap-2 w-44 mt-3">
+          <div />
           <button
-            onClick={() => handleMove('up')}
-            className="w-12 h-11 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center active:bg-zinc-800 active:scale-95 mb-1.5 text-zinc-300 shadow-sm"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleMove('up');
+            }}
+            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 active:bg-zinc-800 active:scale-95 flex items-center justify-center shadow-xs"
           >
-            <ChevronUp size={22} />
+            <ChevronUp size={20} />
           </button>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => handleMove('left')}
-              className="w-12 h-11 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-300 shadow-sm"
-            >
-              <ChevronLeft size={22} />
-            </button>
-            <button
-              onClick={() => handleMove('down')}
-              className="w-12 h-11 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-300 shadow-sm"
-            >
-              <ChevronDown size={22} />
-            </button>
-            <button
-              onClick={() => handleMove('right')}
-              className="w-12 h-11 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-300 shadow-sm"
-            >
-              <ChevronRight size={22} />
-            </button>
-          </div>
+          <div />
+
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleMove('left');
+            }}
+            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 active:bg-zinc-800 active:scale-95 flex items-center justify-center shadow-xs"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleMove('down');
+            }}
+            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 active:bg-zinc-800 active:scale-95 flex items-center justify-center shadow-xs"
+          >
+            <ChevronDown size={20} />
+          </button>
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleMove('right');
+            }}
+            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 active:bg-zinc-800 active:scale-95 flex items-center justify-center shadow-xs"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
       </div>
     </div>

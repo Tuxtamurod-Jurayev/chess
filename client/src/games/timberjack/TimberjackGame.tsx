@@ -1,14 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
+import { LumberjackCharacter } from './LumberjackCharacter.js';
 
 type BranchPos = 'none' | 'left' | 'right';
 
 interface TreeSegment {
   id: number;
   branch: BranchPos;
+}
+
+interface FlyingLog {
+  id: number;
+  direction: 'left' | 'right';
+  x: number;
+  y: number;
+}
+
+interface WoodParticle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  size: number;
 }
 
 export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -20,7 +38,12 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [isChopping, setIsChopping] = useState(false);
-  const [flyingWood, setFlyingWood] = useState<{ id: number; side: 'left' | 'right' } | null>(null);
+  const [flyingLogs, setFlyingLogs] = useState<FlyingLog[]>([]);
+  const [particles, setParticles] = useState<WoodParticle[]>([]);
+  const [treeRecoil, setTreeRecoil] = useState(false);
+
+  const gameOverRef = useRef(false);
+  gameOverRef.current = gameOver;
 
   function generateInitialTree(): TreeSegment[] {
     const segments: TreeSegment[] = [];
@@ -44,30 +67,76 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
     const interval = setInterval(() => {
       setTimeLeft((t) => {
-        if (t <= 0.5) {
+        if (t <= 0.4) {
           handleGameOver();
           return 0;
         }
-        // Much longer, comfortable time decay (11+ seconds)
-        return t - 0.45;
+        return t - 0.45; // Generous comfortable ~11s timer
       });
     }, 50);
 
     return () => clearInterval(interval);
   }, [started, gameOver]);
 
+  // Clean up flying logs
+  useEffect(() => {
+    if (flyingLogs.length === 0) return;
+    const timeout = setTimeout(() => {
+      setFlyingLogs((logs) => logs.slice(1));
+    }, 450);
+    return () => clearTimeout(timeout);
+  }, [flyingLogs]);
+
+  // Clean up particles
+  useEffect(() => {
+    if (particles.length === 0) return;
+    const timeout = setTimeout(() => {
+      setParticles([]);
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [particles]);
+
   const chop = (side: 'left' | 'right') => {
-    if (gameOver) return;
+    if (gameOverRef.current) return;
     if (!started) setStarted(true);
 
     tg.haptic('light');
     setPlayerSide(side);
     setIsChopping(true);
-    setTimeout(() => setIsChopping(false), 160);
+    setTimeout(() => setIsChopping(false), 140);
 
-    // Wood chip flies away to the opposite side
-    setFlyingWood({ id: Date.now(), side: side === 'left' ? 'right' : 'left' });
+    // Tree recoil vibration
+    setTreeRecoil(true);
+    setTimeout(() => setTreeRecoil(false), 80);
 
+    // Spawn flying cut log to opposite side
+    const flyDir = side === 'left' ? 'right' : 'left';
+    setFlyingLogs((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        direction: flyDir,
+        x: side === 'left' ? 40 : -40,
+        y: -10,
+      },
+    ]);
+
+    // Spawn wood splinter particles
+    const newParticles: WoodParticle[] = [];
+    for (let i = 0; i < 6; i++) {
+      newParticles.push({
+        id: Date.now() + i,
+        x: side === 'left' ? -15 : 15,
+        y: 10 + Math.random() * 20,
+        vx: (side === 'left' ? 1 : -1) * (Math.random() * 5 + 3),
+        vy: -Math.random() * 6 - 2,
+        rot: Math.random() * 360,
+        size: Math.random() * 4 + 3,
+      });
+    }
+    setParticles(newParticles);
+
+    // Check bottom branch collision
     const bottomBranch = tree[0]?.branch;
     if (bottomBranch === side) {
       handleGameOver();
@@ -107,10 +176,13 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
     setTimeLeft(100);
     setGameOver(false);
     setStarted(false);
+    setFlyingLogs([]);
+    setParticles([]);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      {/* Top Header */}
       <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
         <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
           <ArrowLeft size={18} />
@@ -125,64 +197,119 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Progress Bar */}
-        <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden mb-2">
+        {/* Timer Bar */}
+        <div className="w-full bg-zinc-900 h-2.5 rounded-full overflow-hidden mb-2 p-0.5 border border-zinc-800">
           <div
-            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-75 shadow-xs"
+            className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-full transition-all duration-75 shadow-xs"
             style={{ width: `${timeLeft}%` }}
           />
         </div>
 
-        {/* Realistic Tree Stage */}
-        <div className="relative flex-1 bg-gradient-to-b from-zinc-900/80 via-zinc-900 to-amber-950/20 border-2 border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-end items-center my-2 pb-6 shadow-xl">
-          {/* Tree Trunk */}
-          <div className="w-16 flex flex-col-reverse items-center relative">
-            {tree.map((seg) => (
+        {/* Tree Stage with Vertical Split Touch Zones */}
+        <div
+          style={{ touchAction: 'none' }}
+          className="relative flex-1 bg-gradient-to-b from-zinc-900/90 via-zinc-900 to-amber-950/20 border-2 border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-end items-center my-2 pb-6 shadow-xl"
+        >
+          {/* Subtle Vertical Split Seam dividing the screen in half */}
+          <div className="absolute inset-y-0 left-1/2 w-px border-r border-dashed border-zinc-700/30 pointer-events-none z-10" />
+
+          {/* Left Half Touch Zone (entire left half of screen) */}
+          <div
+            onPointerDown={(e) => {
+              e.preventDefault();
+              chop('left');
+            }}
+            className="absolute inset-y-0 left-0 w-1/2 z-20 cursor-pointer active:bg-amber-500/10 transition-colors flex items-end justify-start p-4 group"
+          >
+            <span className="text-[11px] font-mono font-bold text-zinc-600/70 group-active:text-amber-400 select-none">
+              👈 CHAPGA
+            </span>
+          </div>
+
+          {/* Right Half Touch Zone (entire right half of screen) */}
+          <div
+            onPointerDown={(e) => {
+              e.preventDefault();
+              chop('right');
+            }}
+            className="absolute inset-y-0 right-0 w-1/2 z-20 cursor-pointer active:bg-amber-500/10 transition-colors flex items-end justify-end p-4 group"
+          >
+            <span className="text-[11px] font-mono font-bold text-zinc-600/70 group-active:text-amber-400 select-none">
+              O‘NGGA 👉
+            </span>
+          </div>
+
+          {/* Tree Trunk Column */}
+          <div
+            className={`w-20 flex flex-col-reverse items-center relative transition-transform duration-75 ${
+              treeRecoil ? 'scale-[0.98]' : 'scale-100'
+            }`}
+          >
+            {tree.map((seg, idx) => (
               <div
                 key={seg.id}
-                className="w-16 h-12 bg-amber-900 border-x-2 border-amber-950 relative flex items-center justify-center shrink-0 shadow-sm"
+                className={`w-20 h-14 bg-gradient-to-r from-amber-950 via-amber-900 to-amber-950 border-x-2 border-amber-950 relative flex items-center justify-center shrink-0 shadow-sm ${
+                  idx === 0 && treeRecoil ? 'brightness-125' : ''
+                }`}
               >
-                {/* Wood bark grain */}
-                <div className="w-full h-1 bg-amber-800/60" />
+                {/* Wood bark grain textures */}
+                <div className="w-full h-1 bg-amber-800/40" />
+                <div className="w-full h-0.5 bg-amber-950/60 mt-2" />
 
                 {/* Left Branch */}
                 {seg.branch === 'left' && (
-                  <div className="absolute right-full top-2 w-14 h-7 bg-amber-950 rounded-l-full border-t border-b border-amber-800 shadow-md">
-                    <div className="w-6 h-6 bg-emerald-600 rounded-full -left-2 -top-1 absolute shadow-xs" />
+                  <div className="absolute right-full top-2 w-16 h-8 bg-gradient-to-l from-amber-900 to-amber-950 rounded-l-full border-t border-b border-amber-800 shadow-lg flex items-center">
+                    {/* Green Pine Leaves */}
+                    <div className="w-7 h-7 bg-emerald-600 rounded-full -left-2 -top-1 absolute shadow-sm border border-emerald-500" />
+                    <div className="w-5 h-5 bg-emerald-500 rounded-full -left-1 top-2 absolute shadow-sm" />
                   </div>
                 )}
+
                 {/* Right Branch */}
                 {seg.branch === 'right' && (
-                  <div className="absolute left-full top-2 w-14 h-7 bg-amber-950 rounded-r-full border-t border-b border-amber-800 shadow-md">
-                    <div className="w-6 h-6 bg-emerald-600 rounded-full -right-2 -top-1 absolute shadow-xs" />
+                  <div className="absolute left-full top-2 w-16 h-8 bg-gradient-to-r from-amber-900 to-amber-950 rounded-r-full border-t border-b border-amber-800 shadow-lg flex items-center">
+                    {/* Green Pine Leaves */}
+                    <div className="w-7 h-7 bg-emerald-600 rounded-full -right-2 -top-1 absolute shadow-sm border border-emerald-500" />
+                    <div className="w-5 h-5 bg-emerald-500 rounded-full -right-1 top-2 absolute shadow-sm" />
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Realistic Woodcutter with Chop Swing */}
+          {/* Realistic Animated Lumberjack Character */}
           <div
-            className={`absolute bottom-6 transition-all duration-75 ${
-              playerSide === 'left' ? 'left-8' : 'right-8'
-            } ${isChopping ? 'animate-chop' : ''}`}
+            className={`absolute bottom-5 transition-all duration-100 z-10 ${
+              playerSide === 'left' ? 'left-6' : 'right-6'
+            }`}
           >
-            <div className="w-12 h-14 bg-red-600 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold shadow-lg border border-red-500">
-              <span className="text-base">🧔</span>
-              <span className="text-amber-300 text-xs">🪓</span>
-            </div>
+            <LumberjackCharacter side={playerSide} isChopping={isChopping} />
           </div>
 
-          {/* Flying Wood Chip Particle */}
-          {flyingWood && (
+          {/* Flying Wood Logs (spinning away on chop) */}
+          {flyingLogs.map((log) => (
             <div
-              key={flyingWood.id}
-              className={`absolute bottom-10 w-5 h-4 bg-amber-700 border border-amber-900 rounded-xs shadow-md ${
-                flyingWood.side === 'left' ? 'left-16 animate-fly-left' : 'right-16 animate-fly-right'
+              key={log.id}
+              className={`absolute bottom-16 w-14 h-10 bg-amber-900 border-2 border-amber-950 rounded-lg shadow-xl z-20 pointer-events-none ${
+                log.direction === 'left' ? 'animate-fly-left' : 'animate-fly-right'
               }`}
-            />
-          )}
+            >
+              <div className="w-full h-1 bg-amber-800/50 mt-1" />
+            </div>
+          ))}
 
+          {/* Wood Splinter Particles */}
+          {particles.map((p) => (
+            <div
+              key={p.id}
+              className="absolute bottom-20 w-2 h-1 bg-amber-600 rounded-xs z-20 pointer-events-none animate-ping"
+              style={{
+                transform: `translate(${p.x * 2}px, ${p.y}px) rotate(${p.rot}deg)`,
+              }}
+            />
+          ))}
+
+          {/* Game Over Screen */}
           {gameOver && (
             <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
               <h3 className="text-xl font-black text-white mb-1">O‘yin tugadi!</h3>
@@ -199,21 +326,27 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
           )}
         </div>
 
-        {/* Minimal Tap Controls */}
+        {/* Bottom Guide Control Buttons (can also be tapped) */}
         <div className="grid grid-cols-2 gap-3 mt-2">
           <button
-            onClick={() => chop('left')}
-            className="py-5 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex flex-col items-center justify-center space-y-1"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              chop('left');
+            }}
+            className="py-4 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex items-center justify-center space-x-2"
           >
-            <span className="text-xl">👈</span>
+            <span className="text-lg">🪓</span>
             <span>CHAPGA ZARBA</span>
           </button>
           <button
-            onClick={() => chop('right')}
-            className="py-5 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex flex-col items-center justify-center space-y-1"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              chop('right');
+            }}
+            className="py-4 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex items-center justify-center space-x-2"
           >
-            <span className="text-xl">👉</span>
             <span>O‘NGGA ZARBA</span>
+            <span className="text-lg">🪓</span>
           </button>
         </div>
       </div>
