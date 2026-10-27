@@ -45,6 +45,9 @@ export class TelegramBotService {
     }
 
     try {
+      if (!this.webappUrl && process.env.RENDER_EXTERNAL_URL) {
+        this.webappUrl = process.env.RENDER_EXTERNAL_URL;
+      }
       this.botUsername = meRes.result.username || 'my_game001_bot';
       console.log(`🤖 [TelegramBot] Muvaffaqiyatli ulandi: @${this.botUsername} (${meRes.result.first_name})`);
 
@@ -149,7 +152,7 @@ export class TelegramBotService {
   }
 
   private getAppUrl(param?: string): string {
-    const base = this.webappUrl || 'https://resulting-llc-describing-offered.trycloudflare.com';
+    const base = this.webappUrl || process.env.RENDER_EXTERNAL_URL || 'https://resulting-llc-describing-offered.trycloudflare.com';
     if (!param) return base;
     return base.includes('?') ? `${base}&startapp=${param}` : `${base}?startapp=${param}`;
   }

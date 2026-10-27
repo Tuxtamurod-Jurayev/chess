@@ -41,9 +41,10 @@ const roomManager = new RoomManager(io);
 const matchmakingQueue = new MatchmakingQueue(io, roomManager);
 
 // Telegram Bot instance
+const webappUrl = process.env.WEBAPP_URL || process.env.RENDER_EXTERNAL_URL || '';
 const telegramBot = new TelegramBotService({
   token: process.env.TELEGRAM_BOT_TOKEN || '',
-  webappUrl: process.env.WEBAPP_URL || '',
+  webappUrl,
 });
 
 // REST Endpoints

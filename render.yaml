@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: telegram-gaming-portal
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: WEBAPP_URL
+        sync: false

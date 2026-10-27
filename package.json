@@ -6,11 +6,11 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
+    "install:all": "npm --prefix server install && npm --prefix client install",
     "build:client": "npm --prefix client run build",
     "build:server": "npm --prefix server run build",
-    "build": "npm run build:server && npm run build:client",
-    "tunnel": "npx --yes localtunnel --port 3001 --subdomain my-games-001",
-    "start": "npm --prefix server run start"
+    "build": "npm --prefix server install && npm --prefix client install && npm run build:client && npm run build:server",
+    "start": "node server/dist/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
