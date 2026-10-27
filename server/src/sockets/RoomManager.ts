@@ -20,10 +20,12 @@ export class RoomManager {
       gameMode?: 'pvp' | 'bot';
       botDifficulty?: 'easy' | 'medium' | 'hard';
       timerMinutes?: number;
+      hostColor?: 'w' | 'b';
     } = {}
   ): GameRoom {
     const roomId = `room_${Math.random().toString(36).substring(2, 9)}`;
     const timerSeconds = (options.timerMinutes || 5) * 60;
+    const hostColor = options.hostColor || 'w';
 
     const room: GameRoom = {
       id: roomId,
@@ -31,13 +33,14 @@ export class RoomManager {
       status: options.gameMode === 'bot' ? 'playing' : 'waiting',
       host,
       guest: options.gameMode === 'bot' ? this.createBotProfile(options.botDifficulty || 'medium') : undefined,
-      currentTurn: host.id, // White starts
+      currentTurn: hostColor === 'w' ? host.id : undefined,
       gameState: this.getInitialGameState(gameId),
       timerWhite: timerSeconds,
       timerBlack: timerSeconds,
       lastMoveTimestamp: Date.now(),
       gameMode: options.gameMode || 'pvp',
       botDifficulty: options.botDifficulty || 'medium',
+      hostColor,
       createdAt: Date.now(),
     };
 
@@ -112,9 +115,10 @@ export class RoomManager {
     if (!chess) return false;
 
     const currentTurnColor = chess.turn(); // 'w' | 'b'
-    const expectedColor = isHost ? 'w' : 'b';
+    const hostColor = room.hostColor || 'w';
+    const playerColor = isHost ? hostColor : (hostColor === 'w' ? 'b' : 'w');
 
-    if (currentTurnColor !== expectedColor) {
+    if (currentTurnColor !== playerColor) {
       return false; // Not this player's turn
     }
 
@@ -132,7 +136,8 @@ export class RoomManager {
         lastMove: { from: result.from, to: result.to, san: result.san },
       };
 
-      room.currentTurn = chess.turn() === 'w' ? room.host.id : (room.guest?.id || 'bot');
+      const nextTurnColor = chess.turn();
+      room.currentTurn = nextTurnColor === hostColor ? room.host.id : (room.guest?.id || 'bot');
       room.lastMoveTimestamp = Date.now();
 
       // Check game over

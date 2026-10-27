@@ -51,5 +51,6 @@ export interface GameRoom {
   draw?: boolean;
   gameMode?: 'pvp' | 'bot';
   botDifficulty?: 'easy' | 'medium' | 'hard';
+  hostColor?: 'w' | 'b';
   createdAt: number;
 }

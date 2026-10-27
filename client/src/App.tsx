@@ -60,9 +60,12 @@ export const App: React.FC = () => {
       .then((res) => {
         setUser(res.user);
 
-        // Check if user came from a deep link invite (e.g. startapp=join_chess)
+        // Check if user came from a deep link invite (e.g. startapp=challenge_<id> or join_chess)
         const startParam = (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param || new URLSearchParams(window.location.search).get('startapp');
-        if (startParam && startParam.startsWith('join_')) {
+        if (startParam && startParam.startsWith('challenge_')) {
+          const challengeId = startParam.replace('challenge_', '');
+          socket.emit('accept_challenge', { challengeId, userId: res.user.id });
+        } else if (startParam && startParam.startsWith('join_')) {
           const gameId = startParam.replace('join_', '');
           const target = ALL_GAMES.find((g) => g.id === gameId);
           if (target) {
@@ -78,22 +81,39 @@ export const App: React.FC = () => {
   }, [setUser, setSelectedGame, setMatchmaking]);
 
   const [incomingChallenge, setIncomingChallenge] = useState<{
+    challengeId: string;
     gameId: string;
     hostName: string;
     hostUserId: string;
+    timeMinutes?: number;
+    hostColor?: 'w' | 'b';
   } | null>(null);
 
   // Socket event listeners
   useEffect(() => {
-    socket.on('game_challenge_broadcast', (data: { gameId: string; hostName: string; hostUserId: string }) => {
+    socket.on('game_challenge_broadcast', (data: {
+      challengeId: string;
+      gameId: string;
+      hostName: string;
+      hostUserId: string;
+      timeMinutes?: number;
+      hostColor?: 'w' | 'b';
+    }) => {
       if (user && data.hostUserId === user.id) return;
       tg.haptic('warning');
       setIncomingChallenge(data);
 
-      // Auto dismiss after 14 seconds
+      // Auto dismiss after 15 seconds
       setTimeout(() => {
-        setIncomingChallenge((curr) => (curr?.hostUserId === data.hostUserId ? null : curr));
-      }, 14000);
+        setIncomingChallenge((curr) => (curr?.challengeId === data.challengeId ? null : curr));
+      }, 15000);
+    });
+
+    socket.on('challenge_already_taken', () => {
+      tg.haptic('warning');
+      alert("⚠️ Bu o‘yinga allaqachon boshqa foydalanuvchi qo‘shildi. Siz yangi o‘yin taklifi yaratishingiz mumkin!");
+      const target = ALL_GAMES.find((g) => g.id === 'chess') || ALL_GAMES[0];
+      setSelectedGame(target);
     });
 
     socket.on('match_found', (data: any) => {
@@ -101,7 +121,7 @@ export const App: React.FC = () => {
       setMatchmaking(false);
       setActiveRoom(data.room);
       // Select the game
-      const targetGame = {
+      const targetGame = ALL_GAMES.find((g) => g.id === data.room.gameId) || {
         id: data.room.gameId,
         title: data.room.gameId,
         titleUz: data.room.gameId,
@@ -124,10 +144,11 @@ export const App: React.FC = () => {
 
     return () => {
       socket.off('game_challenge_broadcast');
+      socket.off('challenge_already_taken');
       socket.off('match_found');
       socket.off('error');
     };
-  }, [setMatchmaking, setActiveRoom, setSelectedGame]);
+  }, [user, setMatchmaking, setActiveRoom, setSelectedGame]);
 
   // Floating Challenge Invite Banner
   const renderChallengeBanner = () => {
@@ -141,7 +162,7 @@ export const App: React.FC = () => {
               {incomingChallenge.hostName} sizni o‘yinga chaqirmoqda!
             </span>
             <span className="text-[10px] text-blue-300 font-mono">
-              {incomingChallenge.gameId.toUpperCase()} • 1v1 Onlayn
+              CHESS • {incomingChallenge.timeMinutes || 5} daq • 1v1 Onlayn
             </span>
           </div>
         </div>
@@ -149,15 +170,15 @@ export const App: React.FC = () => {
           <button
             onClick={() => {
               tg.haptic('medium');
-              const target = ALL_GAMES.find((g) => g.id === incomingChallenge.gameId) || ALL_GAMES[0];
-              setSelectedGame(target);
-              setMatchmaking(true, target.id as any);
-              if (user) {
-                socket.emit('join_queue', { userId: user.id, gameId: target.id });
+              if (user && incomingChallenge) {
+                socket.emit('accept_challenge', {
+                  challengeId: incomingChallenge.challengeId,
+                  userId: user.id,
+                });
               }
               setIncomingChallenge(null);
             }}
-            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs rounded-xl shadow-md active:scale-95"
+            className="px-3.5 py-1.5 bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs rounded-xl shadow-md active:scale-95"
           >
             Qo‘shilish
           </button>

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Chess, type Square } from 'chess.js';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Flag } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Clock, Swords, Shuffle, Loader2, Flag } from 'lucide-react';
 import { ChessPieceIcon } from './ChessPieces.js';
 import { findBestChessMove } from './chessAI.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { socket } from '../../services/socket.js';
+import type { GameRoom } from '../../types.js';
 
 interface ChessGameProps {
   onBack: () => void;
 }
 
 export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
-  const { user, setMatchmaking, updateCoins } = useAppStore();
+  const { user, updateCoins } = useAppStore();
 
   const [chess] = useState(() => new Chess());
   const [fen, setFen] = useState(chess.fen());
@@ -22,6 +23,15 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   const [gameMode, setGameMode] = useState<'bot' | 'pvp' | 'pass_play'>('bot');
   const [botLevel, setBotLevel] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [gameStarted, setGameStarted] = useState(false);
+
+  // 1v1 Online Challenge States
+  const [showPvpSetup, setShowPvpSetup] = useState(false);
+  const [selectedMinutes, setSelectedMinutes] = useState<3 | 5 | 10>(5);
+  const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('random');
+  const [isWaitingForOpponent, setIsWaitingForOpponent] = useState(false);
+  const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null);
+  const [pvpRoom, setPvpRoom] = useState<GameRoom | null>(null);
+  const [myColor, setMyColor] = useState<'w' | 'b'>('w');
 
   // Timers (in seconds)
   const [whiteTimer, setWhiteTimer] = useState(300);
@@ -39,7 +49,82 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     return () => tg.setBackButton(undefined);
   }, [onBack]);
 
-  // Timers
+  // Socket listeners for 1v1 PvP
+  useEffect(() => {
+    const handleChallengeCreated = (data: { room: GameRoom; hostColor: 'w' | 'b' }) => {
+      setIsWaitingForOpponent(true);
+      setPendingChallengeId(data.room.id);
+      setPvpRoom(data.room);
+      setMyColor(data.hostColor);
+    };
+
+    const handleMatchFound = (data: { room: GameRoom; hostColor: 'w' | 'b' }) => {
+      tg.haptic('success');
+      confetti({ particleCount: 40, spread: 60 });
+      setIsWaitingForOpponent(false);
+      setShowPvpSetup(false);
+      setPvpRoom(data.room);
+      setGameMode('pvp');
+
+      const isHost = user && data.room.host.id === user.id;
+      const assignedColor: 'w' | 'b' = isHost ? (data.hostColor || 'w') : ((data.hostColor || 'w') === 'w' ? 'b' : 'w');
+      setMyColor(assignedColor);
+
+      chess.reset();
+      setFen(chess.fen());
+      setSelectedSquare(null);
+      setValidMoves([]);
+
+      setWhiteTimer(data.room.timerWhite || 300);
+      setBlackTimer(data.room.timerBlack || 300);
+      setActiveTimerSide('w');
+      setGameOverResult(null);
+      setGameStarted(true);
+    };
+
+    const handleGameUpdated = (data: {
+      gameState: any;
+      currentTurn: string;
+      timerWhite: number;
+      timerBlack: number;
+    }) => {
+      try {
+        if (data.gameState.fen) {
+          chess.load(data.gameState.fen);
+          setFen(chess.fen());
+          tg.haptic('light');
+        }
+        if (typeof data.timerWhite === 'number') setWhiteTimer(data.timerWhite);
+        if (typeof data.timerBlack === 'number') setBlackTimer(data.timerBlack);
+        if (data.gameState.turn) setActiveTimerSide(data.gameState.turn);
+
+        if (chess.isGameOver()) {
+          checkGameState();
+        }
+      } catch (err) {
+        console.warn('Error loading updated chess state:', err);
+      }
+    };
+
+    const handleChallengeCancelled = () => {
+      setIsWaitingForOpponent(false);
+      setPendingChallengeId(null);
+    };
+
+    socket.on('challenge_created', handleChallengeCreated);
+    socket.on('match_found', handleMatchFound);
+    socket.on('game_updated', handleGameUpdated);
+    socket.on('challenge_cancelled', handleChallengeCancelled);
+
+    return () => {
+      socket.off('challenge_created', handleChallengeCreated);
+      socket.off('match_found', handleMatchFound);
+      socket.off('game_updated', handleGameUpdated);
+      socket.off('challenge_cancelled', handleChallengeCancelled);
+    };
+  }, [user, chess]);
+
+  // Timers countdown
   useEffect(() => {
     if (!gameStarted || gameOverResult) return;
 
@@ -66,7 +151,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     return () => clearInterval(interval);
   }, [gameStarted, activeTimerSide, gameOverResult]);
 
-  // Bot move
+  // Bot move (when in Bot mode)
   useEffect(() => {
     if (gameMode === 'bot' && gameStarted && !gameOverResult && chess.turn() === 'b') {
       const timeout = setTimeout(() => {
@@ -77,7 +162,6 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   }, [fen, gameMode, gameStarted, gameOverResult]);
 
   const makeBotMove = () => {
-    // Competitive tactical AI engine (Minimax + Piece-Square Tables)
     const bestMove = findBestChessMove(chess, botLevel);
     if (!bestMove) return;
 
@@ -95,7 +179,16 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
 
   const handleSquareClick = (square: Square) => {
     if (!gameStarted || gameOverResult) return;
+
+    // In Bot mode: player can only move when it's white's turn ('w')
     if (gameMode === 'bot' && chess.turn() === 'b') return;
+
+    // In 1v1 PvP mode: player can only move when it is their turn!
+    if (gameMode === 'pvp') {
+      if (chess.turn() !== myColor) {
+        return; // Not my turn
+      }
+    }
 
     const piece = chess.get(square);
 
@@ -119,15 +212,33 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           setSelectedSquare(null);
           setValidMoves([]);
           setActiveTimerSide(chess.turn());
+
+          // Send move to server if in PvP mode
+          if (gameMode === 'pvp' && pvpRoom && user) {
+            socket.emit('game_move', {
+              roomId: pvpRoom.id,
+              userId: user.id,
+              payload: {
+                from: move.from,
+                to: move.to,
+                promotion: move.promotion || 'q',
+              },
+            });
+          }
+
           checkGameState();
           return;
         }
       } catch {
-        // illegal move
+        // Illegal move attempt
       }
     }
 
+    // Select piece
     if (piece && piece.color === chess.turn()) {
+      if (gameMode === 'pvp' && piece.color !== myColor) {
+        return; // Cannot select opponent's pieces
+      }
       tg.haptic('select');
       setSelectedSquare(square);
       const moves = chess.moves({ square, verbose: true });
@@ -151,16 +262,23 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
 
   const handleGameOver = (winner: 'w' | 'b' | 'draw', reason: string) => {
     setGameOverResult({ winner, reason });
-    if (winner === 'w' && user) {
+    const isWin = (winner === 'w' && myColor === 'w') || (winner === 'b' && myColor === 'b');
+    if (isWin && user) {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       tg.haptic('success');
-      updateCoins(user.coins + 30);
+      updateCoins(user.coins + 35);
     } else {
       tg.haptic(winner === 'draw' ? 'warning' : 'error');
     }
   };
 
   const restartGame = () => {
+    if (gameMode === 'pvp') {
+      // In PvP, exit to lobby
+      setGameStarted(false);
+      setPvpRoom(null);
+      return;
+    }
     chess.reset();
     setFen(chess.fen());
     setSelectedSquare(null);
@@ -173,14 +291,47 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     tg.haptic('medium');
   };
 
+  const handleSendChallenge = () => {
+    if (!user) return;
+    tg.haptic('medium');
+    socket.emit('create_challenge', {
+      userId: user.id,
+      gameId: 'chess',
+      timeMinutes: selectedMinutes,
+      color: selectedColor,
+    });
+  };
+
+  const handleCancelChallenge = () => {
+    if (pendingChallengeId && user) {
+      socket.emit('cancel_challenge', {
+        challengeId: pendingChallengeId,
+        userId: user.id,
+      });
+    }
+    setIsWaitingForOpponent(false);
+    setPendingChallengeId(null);
+    setShowPvpSetup(false);
+  };
+
   const formatTimer = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+  // Flip board if player is playing Black ('b')
+  const isFlipped = gameMode === 'pvp' && myColor === 'b';
+  const files = isFlipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ranks = isFlipped ? ['1', '2', '3', '4', '5', '6', '7', '8'] : ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+  // Identify Opponent Profile
+  const opponentProfile =
+    gameMode === 'pvp' && pvpRoom
+      ? user && pvpRoom.host.id === user.id
+        ? pvpRoom.guest
+        : pvpRoom.host
+      : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
@@ -195,20 +346,20 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
         <div className="text-center">
           <h2 className="text-xs font-semibold text-zinc-100">Shaxmat</h2>
           <span className="text-[10px] text-zinc-500 font-mono">
-            {gameMode === 'bot' ? `Bot (${botLevel})` : '1v1'}
+            {gameMode === 'bot' ? `AI (${botLevel})` : gameMode === 'pvp' ? `1v1 Onlayn (${myColor === 'w' ? 'Oqlar' : 'Qoralar'})` : '2P Lokal'}
           </span>
         </div>
         <button
           onClick={restartGame}
           className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg transition-colors active:scale-95"
-          title="Qayta"
+          title="Qayta / Chiqish"
         >
           <RotateCcw size={16} />
         </button>
       </div>
 
       {!gameStarted ? (
-        /* Minimal Lobby */
+        /* Mode Selection Lobby */
         <div className="flex-1 p-5 flex flex-col justify-center max-w-sm mx-auto w-full space-y-4">
           <div className="text-center mb-2">
             <h2 className="text-base font-bold text-zinc-100">O‘yin Rejimi</h2>
@@ -216,6 +367,29 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
 
           <div className="space-y-2">
+            {/* 1v1 Onlayn Tugmasi */}
+            <button
+              onClick={() => {
+                tg.haptic('medium');
+                setShowPvpSetup(true);
+              }}
+              className="w-full p-3.5 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border border-blue-500/50 hover:border-blue-400 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all shadow-md group"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                  <Swords size={20} />
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-white">1v1 Onlayn</span>
+                  <span className="text-[10px] text-blue-300">Vaqt va rang tanlab taklif yuborish</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
+                PvP
+              </span>
+            </button>
+
+            {/* Botga qarshi */}
             <button
               onClick={() => {
                 setGameMode('bot');
@@ -233,25 +407,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
               </span>
             </button>
 
-            <button
-              onClick={() => {
-                tg.haptic('medium');
-                setMatchmaking(true, 'chess');
-                if (user) {
-                  socket.emit('join_queue', { userId: user.id, gameId: 'chess' });
-                }
-              }}
-              className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all"
-            >
-              <div>
-                <span className="block text-xs font-semibold text-zinc-200">1v1 Onlayn</span>
-                <span className="text-[10px] text-zinc-500">Tasodifiy o‘yinchi qidirish</span>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400">
-                1200 ELO
-              </span>
-            </button>
-
+            {/* Lokal 2P */}
             <button
               onClick={() => {
                 setGameMode('pass_play');
@@ -270,7 +426,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
             </button>
           </div>
 
-          {/* Bot Level */}
+          {/* Bot Level Selector */}
           <div className="pt-2">
             <span className="text-[10px] font-medium text-zinc-500 block mb-1.5 uppercase tracking-wider">
               Bot darajasi:
@@ -293,32 +449,46 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
         </div>
       ) : (
-        /* Active Board */
+        /* Active Board View */
         <div className="flex-1 flex flex-col justify-between p-3.5 max-w-sm mx-auto w-full">
-          {/* Top (Black) */}
-          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+          {/* Top Opponent Card */}
+          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/70 border border-zinc-800 rounded-xl shadow-xs">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs text-zinc-300 font-bold font-mono">
-                {gameMode === 'bot' ? '🤖' : '♟'}
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs text-zinc-300 font-bold font-mono overflow-hidden">
+                {gameMode === 'bot' ? (
+                  '🤖'
+                ) : opponentProfile?.photoUrl ? (
+                  <img src={opponentProfile.photoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (isFlipped ? '⚪' : '⚫')
+                )}
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">
-                  {gameMode === 'bot' ? `AI Master (${botLevel.toUpperCase()})` : 'Qoralar (Black)'}
+                  {gameMode === 'bot'
+                    ? `AI Master (${botLevel.toUpperCase()})`
+                    : opponentProfile?.firstName || 'Raqib kutilmoqda'}
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono">
-                  {gameMode === 'bot' ? (botLevel === 'hard' ? '1850 ELO' : botLevel === 'medium' ? '1500 ELO' : '1250 ELO') : '1400 ELO'}
+                  {gameMode === 'bot'
+                    ? botLevel === 'hard'
+                      ? '1850 ELO'
+                      : botLevel === 'medium'
+                      ? '1500 ELO'
+                      : '1250 ELO'
+                    : `@${opponentProfile?.username || 'player'}`}
                 </span>
               </div>
             </div>
 
             <div
               className={`font-mono text-sm px-2.5 py-1 rounded-lg border transition-all ${
-                activeTimerSide === 'b'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs animate-pulse-subtle'
+                (isFlipped ? activeTimerSide === 'w' : activeTimerSide === 'b')
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs'
                   : 'bg-zinc-800/80 text-zinc-500 border-zinc-700'
               }`}
             >
-              {formatTimer(blackTimer)}
+              {formatTimer(isFlipped ? whiteTimer : blackTimer)}
             </div>
           </div>
 
@@ -369,23 +539,21 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                       {/* Piece with smooth lift/drop */}
                       {piece && (
                         <div
-                          className={`w-[84%] h-[84%] z-10 transition-transform duration-150 ease-out ${
-                            isSelected ? '-translate-y-1 scale-110 drop-shadow-md' : 'translate-y-0 scale-100'
+                          className={`w-[84%] h-[84%] flex items-center justify-center transition-transform duration-100 ${
+                            isSelected ? '-translate-y-1 scale-105' : ''
                           }`}
                         >
-                          <ChessPieceIcon
-                            piece={piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()}
-                          />
+                          <ChessPieceIcon piece={piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()} />
                         </div>
                       )}
 
-                      {/* Move dot with spring scale */}
+                      {/* Valid move indicator */}
                       {isValidTarget && (
                         <div
-                          className={`absolute z-20 rounded-full animate-pop ${
+                          className={`absolute rounded-full pointer-events-none ${
                             piece
-                              ? 'w-full h-full border-2 border-zinc-100/50 bg-zinc-100/15'
-                              : 'w-2.5 h-2.5 bg-zinc-100/50 shadow-xs'
+                              ? 'w-full h-full border-4 border-amber-400/80'
+                              : 'w-3 h-3 bg-zinc-900/40 shadow-xs ring-2 ring-white/50'
                           }`}
                         />
                       )}
@@ -396,82 +564,191 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Bottom (White) */}
-          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+          {/* Bottom Player Card (User) */}
+          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/70 border border-zinc-800 rounded-xl shadow-xs">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-xs text-blue-300 font-bold font-mono">
-                {user?.firstName ? user.firstName[0].toUpperCase() : 'W'}
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs text-zinc-300 font-bold font-mono overflow-hidden">
+                {user?.photoUrl ? (
+                  <img src={user.photoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (isFlipped ? '⚫' : '⚪')
+                )}
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">
-                  {user?.firstName || 'Siz'} (Oqlar)
+                  {user?.firstName || 'Siz'} ({isFlipped ? 'Qoralar' : 'Oqlar'})
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono">
-                  {user?.eloRating?.chess || 1200} ELO
+                  {gameMode === 'pvp' ? `@${user?.username || 'player'}` : 'Sizning navbatingiz'}
                 </span>
               </div>
             </div>
 
             <div
               className={`font-mono text-sm px-2.5 py-1 rounded-lg border transition-all ${
-                activeTimerSide === 'w'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs animate-pulse-subtle'
+                (isFlipped ? activeTimerSide === 'b' : activeTimerSide === 'w')
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs'
                   : 'bg-zinc-800/80 text-zinc-500 border-zinc-700'
               }`}
             >
-              {formatTimer(whiteTimer)}
+              {formatTimer(isFlipped ? blackTimer : whiteTimer)}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Footer Controls */}
-          <div className="pt-2 flex items-center justify-between border-t border-zinc-800/80">
+      {/* 1v1 Onlayn Setup Sheet (Vaqt va Rang tanlash) */}
+      {showPvpSetup && !isWaitingForOpponent && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Swords size={16} className="text-blue-400" /> 1v1 Onlayn Shaxmat
+              </h3>
+              <button
+                onClick={() => setShowPvpSetup(false)}
+                className="p-1 text-zinc-400 hover:text-white rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Vaqt tanlash */}
+            <div>
+              <label className="text-[11px] font-bold text-zinc-400 block mb-2 font-mono uppercase tracking-wider flex items-center gap-1">
+                <Clock size={12} /> Partiya Vaqti
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { m: 3, label: '3 daq', sub: 'Blitz ⚡' },
+                  { m: 5, label: '5 daq', sub: 'Rapid ⏱️' },
+                  { m: 10, label: '10 daq', sub: 'Klassik ⏳' },
+                ].map((item) => (
+                  <button
+                    key={item.m}
+                    onClick={() => {
+                      tg.haptic('light');
+                      setSelectedMinutes(item.m as any);
+                    }}
+                    className={`py-2.5 px-2 rounded-xl text-center border transition-all ${
+                      selectedMinutes === item.m
+                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-md scale-102'
+                        : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-300 hover:border-zinc-600'
+                    }`}
+                  >
+                    <span className="block text-xs font-bold font-mono">{item.label}</span>
+                    <span className="text-[9px] opacity-80">{item.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rang tanlash */}
+            <div>
+              <label className="text-[11px] font-bold text-zinc-400 block mb-2 font-mono uppercase tracking-wider flex items-center gap-1">
+                <Shuffle size={12} /> Rangingizni Tanlang
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { c: 'w', label: 'Oqlar', icon: '⚪' },
+                  { c: 'random', label: 'Tasodifiy', icon: '🎲' },
+                  { c: 'b', label: 'Qoralar', icon: '⚫' },
+                ].map((item) => (
+                  <button
+                    key={item.c}
+                    onClick={() => {
+                      tg.haptic('light');
+                      setSelectedColor(item.c as any);
+                    }}
+                    className={`py-2.5 px-2 rounded-xl text-center border transition-all ${
+                      selectedColor === item.c
+                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-md scale-102'
+                        : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-300 hover:border-zinc-600'
+                    }`}
+                  >
+                    <span className="text-base block mb-0.5">{item.icon}</span>
+                    <span className="text-[11px] font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Yuborish Button */}
+            <div className="pt-2">
+              <button
+                onClick={handleSendChallenge}
+                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-2xl shadow-lg active:scale-98 transition-all flex items-center justify-center space-x-2"
+              >
+                <span>🚀 Taklif yuborish (Raqib chaqirish)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Raqib Kutilmoqda Overlay */}
+      {isWaitingForOpponent && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 text-center animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <Loader2 size={40} className="text-blue-500 animate-spin" />
+              <Swords size={20} className="text-white absolute" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-white mb-1">Raqib kutilmoqda...</h3>
+              <p className="text-xs text-blue-300 font-mono">
+                {selectedMinutes} daqiqa • {selectedColor === 'w' ? 'Oqlar' : selectedColor === 'b' ? 'Qoralar' : 'Tasodifiy rang'}
+              </p>
+            </div>
+
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Barcha foydalanuvchilarga bildirishnoma yuborildi. Birinchi bo‘lib "Qo‘shilish" bosgan o‘yinchi bilan partiya darhol boshlanadi!
+            </p>
+
             <button
-              onClick={() => handleGameOver('b', 'Taslim bo‘ldingiz')}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-rose-400 transition-colors flex items-center space-x-1"
+              onClick={handleCancelChallenge}
+              className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition-all active:scale-95"
             >
-              <Flag size={12} />
-              <span>Taslim</span>
-            </button>
-
-            <span className="text-[11px] font-mono text-zinc-500">
-              Navbat: {chess.turn() === 'w' ? 'Oqlar' : 'Qoralar'}
-            </span>
-
-            <button
-              onClick={restartGame}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-white transition-colors flex items-center space-x-1"
-            >
-              <RotateCcw size={12} />
-              <span>Qayta</span>
+              Bekor qilish
             </button>
           </div>
         </div>
       )}
 
-      {/* Result Modal */}
+      {/* Game Over Modal */}
       {gameOverResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 text-center shadow-xl animate-fade-in">
-            <h3 className="text-base font-bold text-zinc-100 mb-1">
-              {gameOverResult.winner === 'w' ? 'G‘alaba' : gameOverResult.winner === 'draw' ? 'Durrang' : 'Mag‘lubiyat'}
-            </h3>
-            <p className="text-xs text-zinc-500 mb-4">{gameOverResult.reason}</p>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 text-center animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-xs w-full shadow-2xl space-y-4">
+            <div className="text-3xl">
+              {gameOverResult.winner === 'draw'
+                ? '🤝'
+                : (gameOverResult.winner === 'w' && myColor === 'w') || (gameOverResult.winner === 'b' && myColor === 'b')
+                ? '🏆'
+                : '💀'}
+            </div>
 
-            <div className="space-y-1.5">
-              <button
-                onClick={restartGame}
-                className="w-full py-2.5 px-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs active:scale-95 transition-all"
-              >
-                Qayta o‘ynash
-              </button>
+            <div>
+              <h3 className="text-lg font-black text-white">
+                {gameOverResult.winner === 'draw'
+                  ? 'Durrang!'
+                  : (gameOverResult.winner === 'w' && myColor === 'w') || (gameOverResult.winner === 'b' && myColor === 'b')
+                  ? 'G‘alaba qozondingiz!'
+                  : 'Mag‘lubiyat'}
+              </h3>
+              <p className="text-xs text-zinc-400 font-mono mt-1">{gameOverResult.reason}</p>
+            </div>
+
+            <div className="space-y-2 pt-2">
               <button
                 onClick={() => {
                   setGameOverResult(null);
                   setGameStarted(false);
+                  setPvpRoom(null);
                 }}
-                className="w-full py-2 px-4 rounded-xl text-zinc-400 hover:text-zinc-200 text-xs active:scale-95 transition-all"
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-md active:scale-95"
               >
-                Chiqish
+                Menyuga qaytish
               </button>
             </div>
           </div>

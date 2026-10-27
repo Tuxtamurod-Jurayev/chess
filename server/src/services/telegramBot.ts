@@ -103,7 +103,7 @@ export class TelegramBotService {
     if (chatId) this.activeChatIds.add(chatId);
   }
 
-  public async broadcastGameInvite(hostName: string, gameId: string, excludeTgId?: number) {
+  public async broadcastGameInvite(hostName: string, gameId: string, excludeTgId?: number, challengeId?: string) {
     const now = Date.now();
     // 25 second cooldown to avoid spamming
     if (now - this.lastBroadcastTime < 25000) return;
@@ -116,7 +116,7 @@ export class TelegramBotService {
       'math-battle': 'Matematik Duel',
     };
     const gameName = gameNames[gameId] || 'O‘yin';
-    const webAppUrl = this.getAppUrl(`join_${gameId}`);
+    const webAppUrl = this.getAppUrl(challengeId ? `challenge_${challengeId}` : `join_${gameId}`);
 
     const message = `♟️ <b>${gameName} o‘yiniga taklif!</b>\n\n` +
       `<b>${hostName}</b> ayni daqiqalarda sizni 1v1 onlayn o‘yiniga taklif qilmoqda!\n\n` +

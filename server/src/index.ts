@@ -116,6 +116,67 @@ app.post('/api/solo/finish', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`[Socket] Client connected: ${socket.id}`);
 
+  socket.on('create_challenge', (data: { userId: string; gameId: GameId; timeMinutes: number; color: 'w' | 'b' | 'random' }) => {
+    const user = store.getUser(data.userId);
+    if (!user) return socket.emit('error', { message: 'Foydalanuvchi topilmadi' });
+
+    const hostColor: 'w' | 'b' = data.color === 'random' ? (Math.random() > 0.5 ? 'w' : 'b') : data.color;
+    const room = roomManager.createRoom(user, data.gameId, {
+      gameMode: 'pvp',
+      timerMinutes: data.timeMinutes || 5,
+      hostColor,
+    });
+
+    socket.join(room.id);
+    socket.emit('challenge_created', { room, hostColor });
+    console.log(`[Challenge] Created ${room.id} by ${user.username} (${data.gameId}, ${data.timeMinutes}m, color=${hostColor})`);
+
+    // Broadcast challenge to all other connected WebApp users
+    socket.broadcast.emit('game_challenge_broadcast', {
+      challengeId: room.id,
+      gameId: data.gameId,
+      hostName: user.firstName,
+      hostUserId: user.id,
+      timeMinutes: data.timeMinutes || 5,
+      hostColor,
+    });
+
+    // Broadcast challenge to Telegram bot users
+    telegramBot.broadcastGameInvite(user.firstName, data.gameId, user.telegramId, room.id);
+  });
+
+  socket.on('accept_challenge', (data: { challengeId: string; userId: string }) => {
+    const user = store.getUser(data.userId);
+    if (!user) return socket.emit('error', { message: 'Foydalanuvchi topilmadi' });
+
+    const room = roomManager.getRoom(data.challengeId);
+    if (!room || room.status !== 'waiting' || room.guest) {
+      return socket.emit('challenge_already_taken', { challengeId: data.challengeId });
+    }
+
+    const updatedRoom = roomManager.joinRoom(room.id, user, socket);
+    if (!updatedRoom) {
+      return socket.emit('challenge_already_taken', { challengeId: data.challengeId });
+    }
+
+    const hostColor = updatedRoom.hostColor || 'w';
+    io.to(room.id).emit('match_found', {
+      room: updatedRoom,
+      hostColor,
+    });
+    console.log(`[Challenge] Accepted: ${room.id} by ${user.username}`);
+  });
+
+  socket.on('cancel_challenge', (data: { challengeId: string; userId: string }) => {
+    const room = roomManager.getRoom(data.challengeId);
+    if (room && room.host.id === data.userId && room.status === 'waiting') {
+      room.status = 'ended';
+      socket.leave(room.id);
+      io.emit('challenge_cancelled', { challengeId: data.challengeId });
+      console.log(`[Challenge] Cancelled: ${data.challengeId}`);
+    }
+  });
+
   socket.on('join_queue', (data: { userId: string; gameId: GameId }) => {
     const user = store.getUser(data.userId);
     if (!user) return socket.emit('error', { message: 'Foydalanuvchi topilmadi' });
