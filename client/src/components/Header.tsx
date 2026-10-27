@@ -6,67 +6,56 @@ import { tg } from '../services/telegram.js';
 export const Header: React.FC = () => {
   const { user, setDailyModalOpen, setActiveTab } = useAppStore();
 
-  const handleDailyClick = () => {
-    tg.haptic('medium');
-    setDailyModalOpen(true);
-  };
-
-  const handleProfileClick = () => {
-    tg.haptic('light');
-    setActiveTab('profile');
-  };
-
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
-      {/* User profile avatar & name */}
+    <header className="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+      {/* Profile Info */}
       <button
-        onClick={handleProfileClick}
-        className="flex items-center space-x-2.5 text-left group transition-transform active:scale-95"
+        onClick={() => {
+          tg.haptic('light');
+          setActiveTab('profile');
+        }}
+        className="flex items-center space-x-2.5 text-left group transition-opacity active:opacity-70"
       >
-        <div className="relative">
+        <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-200 overflow-hidden">
           {user?.photoUrl ? (
-            <img
-              src={user.photoUrl}
-              alt={user.firstName}
-              className="w-10 h-10 rounded-full border-2 border-blue-500/80 object-cover shadow-sm"
-            />
+            <img src={user.photoUrl} alt={user.firstName} className="w-full h-full object-cover" />
+          ) : user?.firstName ? (
+            user.firstName[0].toUpperCase()
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
-              {user?.firstName ? user.firstName[0].toUpperCase() : <User size={20} />}
-            </div>
+            <User size={14} className="text-zinc-400" />
           )}
-          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-white leading-tight flex items-center gap-1 group-hover:text-blue-400 transition-colors">
+          <span className="text-xs font-semibold text-zinc-200 block leading-tight">
             {user?.firstName || 'Mehmon'}
-          </h2>
-          <p className="text-[11px] text-slate-400 font-mono">@{user?.username || 'player'}</p>
+          </span>
+          <span className="text-[10px] text-zinc-500 font-mono">@{user?.username || 'player'}</span>
         </div>
       </button>
 
       {/* Stats (Streak & Coins) */}
-      <div className="flex items-center space-x-2">
-        {/* Streak Button */}
+      <div className="flex items-center space-x-1.5">
         <button
-          onClick={handleDailyClick}
-          className="flex items-center space-x-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1.5 rounded-full text-xs font-semibold text-amber-400 transition-all active:scale-95 shadow-sm"
-          title="Kunlik bonus va seriya"
+          onClick={() => {
+            tg.haptic('light');
+            setDailyModalOpen(true);
+          }}
+          className="flex items-center space-x-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-300 transition-colors active:scale-95"
+          title="Kunlik bonus"
         >
-          <Flame size={15} className="text-amber-400 fill-amber-400 animate-pulse" />
-          <span>{user?.dailyStreak || 1} kun</span>
+          <Flame size={13} className="text-amber-500" />
+          <span className="font-mono text-[11px]">{user?.dailyStreak || 1}d</span>
         </button>
 
-        {/* Coins Button */}
         <button
           onClick={() => {
             tg.haptic('light');
             setActiveTab('profile');
           }}
-          className="flex items-center space-x-1.5 bg-gradient-to-r from-yellow-500/15 to-amber-500/15 border border-yellow-500/30 hover:border-yellow-500/50 px-3 py-1.5 rounded-full text-xs font-bold text-yellow-300 transition-all active:scale-95 shadow-sm"
+          className="flex items-center space-x-1.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-200 transition-colors active:scale-95"
         >
-          <Coins size={15} className="text-yellow-400 fill-yellow-400" />
-          <span>{user?.coins?.toLocaleString() ?? 0}</span>
+          <Coins size={13} className="text-amber-400" />
+          <span className="font-mono text-[11px]">{user?.coins?.toLocaleString() ?? 0}</span>
         </button>
       </div>
     </header>

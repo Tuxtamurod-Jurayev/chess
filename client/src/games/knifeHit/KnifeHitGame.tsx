@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Trophy, Crosshair } from 'lucide-react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -16,7 +16,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const gameStateRef = useRef({
     rotation: 0,
     speed: 0.03,
-    targetKnives: [] as number[], // angles in radians
+    targetKnives: [] as number[],
     flyingKnife: null as { y: number } | null,
     gameOver: false,
   });
@@ -33,43 +33,42 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const centerX = canvas.width / 2;
       const centerY = 120;
-      const radius = 55;
+      const radius = 52;
 
       const state = gameStateRef.current;
       if (!state.gameOver) {
         state.rotation += state.speed;
       }
 
-      // Draw Rotating Log Target
+      // Draw Rotating Minimal Disc
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.rotate(state.rotation);
 
-      // Log body
+      // Disc body
       ctx.beginPath();
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#78350f';
+      ctx.fillStyle = '#27272a';
       ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#52525b';
       ctx.stroke();
 
-      // Wood rings
+      // Inner subtle circle
       ctx.beginPath();
-      ctx.arc(0, 0, radius - 15, 0, Math.PI * 2);
-      ctx.strokeStyle = '#92400e';
-      ctx.lineWidth = 2;
+      ctx.arc(0, 0, radius - 14, 0, Math.PI * 2);
+      ctx.strokeStyle = '#3f3f46';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       // Embedded Knives
       for (const angle of state.targetKnives) {
         ctx.save();
         ctx.rotate(angle);
-        // Knife handle & blade sticking out
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(-2, radius, 4, 30);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(-4, radius + 30, 8, 14);
+        ctx.fillStyle = '#f4f4f5';
+        ctx.fillRect(-1.5, radius, 3, 26);
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(-3, radius + 26, 6, 10);
         ctx.restore();
       }
 
@@ -81,19 +80,16 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
         ctx.save();
         ctx.translate(centerX, state.flyingKnife.y);
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(-2.5, 0, 5, 32);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(-4.5, 32, 9, 14);
+        ctx.fillStyle = '#f4f4f5';
+        ctx.fillRect(-1.5, 0, 3, 26);
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(-3, 26, 6, 10);
         ctx.restore();
 
-        // Check collision with target
-        if (state.flyingKnife.y <= centerY + radius + 15) {
-          // Hit target! Calculate relative angle
+        if (state.flyingKnife.y <= centerY + radius + 10) {
           const currentRelAngle = -state.rotation + Math.PI / 2;
           const normalizedAngle = ((currentRelAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
-          // Check if hits existing knife (within 0.25 rad)
           const hitExisting = state.targetKnives.some((existingAngle) => {
             const normExisting = ((existingAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
             const diff = Math.abs(normExisting - normalizedAngle);
@@ -101,7 +97,6 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           });
 
           if (hitExisting) {
-            // Deflection / Game Over
             tg.haptic('error');
             state.gameOver = true;
             state.flyingKnife = null;
@@ -110,8 +105,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               api.finishSoloGame(user.id, 'knife-hit', score).catch(() => {});
             }
           } else {
-            // Success hit
-            tg.haptic('medium');
+            tg.haptic('light');
             state.targetKnives.push(currentRelAngle);
             state.flyingKnife = null;
             setScore((s) => s + 1);
@@ -119,8 +113,7 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             setKnivesLeft((k) => {
               const remaining = k - 1;
               if (remaining <= 0) {
-                // Next Stage!
-                confetti({ particleCount: 60, spread: 60 });
+                confetti({ particleCount: 40, spread: 50 });
                 setStage((st) => st + 1);
                 state.targetKnives = [];
                 state.speed = (Math.random() > 0.5 ? 1 : -1) * (0.03 + stage * 0.005);
@@ -132,14 +125,14 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
       }
 
-      // Draw Ready Knife at bottom if none flying
+      // Draw Ready Knife at bottom
       if (!state.flyingKnife && !state.gameOver) {
         ctx.save();
-        ctx.translate(centerX, canvas.height - 70);
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(-3, 0, 6, 32);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(-5, 32, 10, 15);
+        ctx.translate(centerX, canvas.height - 60);
+        ctx.fillStyle = '#f4f4f5';
+        ctx.fillRect(-2, 0, 4, 28);
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(-3.5, 28, 7, 12);
         ctx.restore();
       }
 
@@ -172,40 +165,39 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Knife Hit (Bosqich {stage})</h2>
-          <span className="text-[10px] text-slate-400">Pichoqlar: {knivesLeft} | Ochko: {score}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Knife Hit ({stage}-bosqich)</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Qoldi: {knivesLeft} | Ball: {score}</span>
         </div>
-        <button onClick={restart} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
         <div
           onClick={throwKnife}
-          className="relative aspect-[3/4] w-full bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col items-center justify-center cursor-pointer"
+          className="relative aspect-[3/4] w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-md flex flex-col items-center justify-center cursor-pointer"
         >
           <canvas ref={canvasRef} width={340} height={380} className="w-full h-full" />
 
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
-              <Trophy size={44} className="text-amber-400 mb-2" />
-              <h3 className="text-2xl font-black mb-1">O‘yin tugadi!</h3>
-              <p className="text-xs text-slate-400 mb-4">To‘plangan ochko: <span className="text-orange-400 font-bold">{score}</span></p>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">Ball: {score}</p>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   restart();
                 }}
-                className="py-3 px-6 rounded-xl bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold text-xs"
+                className="py-2.5 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Qaytadan boshlash
+                Qayta boshlash
               </button>
             </div>
           )}
@@ -214,9 +206,9 @@ export const KnifeHitGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <button
           onClick={throwKnife}
           disabled={gameOver}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-orange-500/25 active:scale-95 transition-all mt-4"
+          className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs active:scale-95 transition-all mt-3"
         >
-          PICHOQ OTISH (TAP)
+          Pichoq otish
         </button>
       </div>
     </div>

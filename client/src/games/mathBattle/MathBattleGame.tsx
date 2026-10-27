@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Heart, Zap, Check, X, Trophy } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, RotateCcw, Heart, Check, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -11,12 +10,12 @@ interface Equation {
 }
 
 export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { user, showToast } = useAppStore();
+  const { user } = useAppStore();
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [combo, setCombo] = useState(1);
   const [equation, setEquation] = useState<Equation>(() => generateEquation());
-  const [timeLeft, setTimeLeft] = useState(100); // percentage 100 -> 0
+  const [timeLeft, setTimeLeft] = useState(100);
   const [gameOver, setGameOver] = useState(false);
 
   function generateEquation(): Equation {
@@ -31,8 +30,8 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
       if (a < b) [a, b] = [b, a];
       realAns = a - b;
     } else {
-      a = Math.floor(Math.random() * 10) + 1;
-      b = Math.floor(Math.random() * 9) + 2;
+      a = Math.floor(Math.random() * 9) + 2;
+      b = Math.floor(Math.random() * 8) + 2;
       realAns = a * b;
     }
 
@@ -50,14 +49,13 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
     };
   }
 
-  // Timer tick (countdown 3 seconds per equation)
   useEffect(() => {
     if (gameOver) return;
 
     const interval = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 2) {
-          handleAnswer(null); // Timeout is treated as wrong
+          handleAnswer(null);
           return 100;
         }
         return t - 2.5;
@@ -71,15 +69,12 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
     if (gameOver) return;
 
     if (userChoice !== null && userChoice === equation.isCorrect) {
-      // Correct!
       tg.haptic('light');
-      const addedPoints = 10 * combo;
-      setScore((s) => s + addedPoints);
+      setScore((s) => s + 10 * combo);
       setCombo((c) => Math.min(5, c + 1));
       setTimeLeft(100);
       setEquation(generateEquation());
     } else {
-      // Wrong or timeout
       tg.haptic('error');
       setCombo(1);
       const newLives = lives - 1;
@@ -108,98 +103,85 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      {/* Header */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Math Battle (Duel)</h2>
-          <span className="text-[10px] text-slate-400">Tezkor hisoblash</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Math Battle</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Ball: {score}</span>
         </div>
-        <button onClick={restartGame} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restartGame} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Top Status Bar: Lives & Combo & Score */}
-        <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5">
-          {/* Hearts */}
+        {/* Status */}
+        <div className="flex items-center justify-between py-1">
           <div className="flex items-center space-x-1">
-            {[1, 2, 3].map((heart) => (
+            {[1, 2, 3].map((h) => (
               <Heart
-                key={heart}
-                size={20}
-                className={heart <= lives ? 'text-rose-500 fill-rose-500' : 'text-slate-700'}
+                key={h}
+                size={14}
+                className={h <= lives ? 'text-zinc-200 fill-zinc-200' : 'text-zinc-800'}
               />
             ))}
           </div>
 
-          {/* Combo */}
           {combo > 1 && (
-            <div className="flex items-center space-x-1 px-2.5 py-1 bg-amber-500/20 border border-amber-500/40 rounded-full text-xs font-black text-amber-400 animate-bounce">
-              <Zap size={14} className="fill-amber-400" />
-              <span>x{combo} COMBO</span>
-            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300">
+              x{combo}
+            </span>
           )}
 
-          {/* Score */}
-          <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Ochko</span>
-            <span className="text-xl font-black text-emerald-400 font-mono">{score}</span>
-          </div>
+          <span className="text-xs font-mono font-semibold text-zinc-200">{score} pts</span>
         </div>
 
-        {/* Time Progress Bar */}
-        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden my-4">
+        {/* Minimal Timer Bar */}
+        <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden my-3">
           <div
-            className={`h-full transition-all duration-75 rounded-full ${
-              timeLeft > 50 ? 'bg-emerald-500' : timeLeft > 25 ? 'bg-amber-500' : 'bg-rose-500'
-            }`}
+            className="h-full bg-zinc-400 transition-all duration-75"
             style={{ width: `${timeLeft}%` }}
           />
         </div>
 
-        {/* Big Equation Card */}
-        <div className="bg-gradient-to-b from-slate-900 to-slate-900/80 border-2 border-slate-800 rounded-3xl p-8 flex items-center justify-center shadow-2xl my-auto">
-          <span className="text-4xl sm:text-5xl font-black font-mono tracking-wider text-white drop-shadow-md">
+        {/* Minimal Equation Card */}
+        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 flex items-center justify-center my-auto">
+          <span className="text-3xl sm:text-4xl font-bold font-mono text-zinc-100 tracking-wide">
             {equation.text}
           </span>
         </div>
 
-        {/* Action Buttons: False or True */}
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        {/* Minimal Buttons */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
           <button
             onClick={() => handleAnswer(false)}
-            className="py-6 rounded-3xl bg-gradient-to-tr from-rose-600 to-red-500 text-white font-black text-xl flex flex-col items-center justify-center space-y-1 shadow-lg shadow-rose-600/30 active:scale-95 transition-all"
+            className="py-4 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition-all"
           >
-            <X size={32} />
-            <span className="text-sm">NOTO‘G‘RI</span>
+            <X size={16} />
+            <span>Noto‘g‘ri</span>
           </button>
 
           <button
             onClick={() => handleAnswer(true)}
-            className="py-6 rounded-3xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-xl flex flex-col items-center justify-center space-y-1 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all"
+            className="py-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition-all"
           >
-            <Check size={32} />
-            <span className="text-sm">TO‘G‘RI</span>
+            <Check size={16} />
+            <span>To‘g‘ri</span>
           </button>
         </div>
 
         {/* Game Over Modal */}
         {gameOver && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl">
-              <Trophy size={48} className="text-amber-400 mx-auto mb-2" />
-              <h3 className="text-2xl font-black mb-1">O‘yin tugadi!</h3>
-              <p className="text-xs text-slate-400 mb-4">
-                Yakuniy natija: <span className="font-bold text-emerald-400 font-mono">{score} ochko</span>
-              </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 text-center shadow-xl">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">To‘plangan ball: {score}</p>
               <button
                 onClick={restartGame}
-                className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-bold text-sm shadow-lg shadow-emerald-600/25 active:scale-95"
+                className="w-full py-2.5 px-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs active:scale-95"
               >
                 Qayta o‘ynash
               </button>

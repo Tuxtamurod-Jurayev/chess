@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Loader2, Bot, X, Users } from 'lucide-react';
+import { X, Users, Bot } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore.js';
 import { socket } from '../services/socket.js';
 import { tg } from '../services/telegram.js';
@@ -11,7 +11,6 @@ interface MatchmakingModalProps {
 export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ onStartBotMatch }) => {
   const {
     isMatchmaking,
-    matchmakingGameId,
     matchmakingSeconds,
     incrementMatchmakingSeconds,
     setMatchmaking,
@@ -49,50 +48,44 @@ export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ onStartBotMa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 relative shadow-2xl text-center">
-        {/* Cancel button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 relative shadow-xl text-center">
         <button
           onClick={handleCancel}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60"
+          className="absolute top-3.5 right-3.5 p-1.5 text-zinc-400 hover:text-white rounded-lg bg-zinc-800/80"
         >
-          <X size={18} />
+          <X size={15} />
         </button>
 
-        {/* Radar Animation */}
-        <div className="relative w-28 h-28 mx-auto my-4 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-500/20 animate-ping"></div>
-          <div className="absolute inset-2 rounded-full border border-blue-500/40 animate-pulse"></div>
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Users size={28} className="text-white animate-pulse" />
-          </div>
+        <div className="w-12 h-12 mx-auto my-3 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-200">
+          <Users size={20} className="animate-pulse" />
         </div>
 
-        <h3 className="text-lg font-bold text-white mb-1">Raqib qidirilmoqda...</h3>
-        <p className="text-xs text-slate-400 mb-2">
-          Sizning reytingingizga mos keluvchi o‘yinchi izlanyapti
+        <h3 className="text-sm font-semibold text-zinc-100 mb-0.5">Raqib qidirilmoqda</h3>
+        <p className="text-[11px] text-zinc-500 mb-3">
+          Onlayn o‘yinchilar orasidan mos raqib izlanmoqda
         </p>
 
-        <div className="inline-block px-3 py-1 bg-slate-800/80 rounded-full text-xs font-mono text-blue-400 mb-6 border border-slate-700/60">
-          Kutilmoqda: {formatTime(matchmakingSeconds)}
+        <div className="inline-block px-3 py-1 bg-zinc-800/80 rounded-md text-xs font-mono text-zinc-300 mb-5 border border-zinc-700/60">
+          {formatTime(matchmakingSeconds)}
         </div>
 
-        <div className="space-y-2.5">
-          {matchmakingSeconds >= 5 && (
+        <div className="space-y-2">
+          {matchmakingSeconds >= 4 && (
             <button
               onClick={handleBotStart}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-2 transition-all active:scale-95 animate-fade-in"
+              className="w-full py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-medium text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95"
             >
-              <Bot size={16} />
-              <span>Kutmasdan Botga qarshi o‘ynash</span>
+              <Bot size={14} />
+              <span>Botga qarshi o‘ynash</span>
             </button>
           )}
 
           <button
             onClick={handleCancel}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-all active:scale-95"
+            className="w-full py-2 px-3 rounded-xl bg-transparent hover:bg-zinc-800/50 text-zinc-400 font-medium text-xs transition-all active:scale-95"
           >
-            Qidiruvni bekor qilish
+            Bekor qilish
           </button>
         </div>
       </div>

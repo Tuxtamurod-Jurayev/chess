@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Trophy, Axe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -34,18 +33,17 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
 
   function getRandomBranch(): BranchPos {
     const r = Math.random();
-    if (r < 0.4) return 'none';
-    return r < 0.7 ? 'left' : 'right';
+    if (r < 0.45) return 'none';
+    return r < 0.72 ? 'left' : 'right';
   }
 
-  // Timer countdown
   useEffect(() => {
     if (!started || gameOver) return;
 
     const interval = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
-          handleGameOver('Vaqt tugadi!');
+          handleGameOver();
           return 0;
         }
         return t - 1.2;
@@ -62,33 +60,30 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
     tg.haptic('light');
     setPlayerSide(side);
 
-    // Check if current bottom segment branch hits player
     const bottomBranch = tree[0]?.branch;
     if (bottomBranch === side) {
-      handleGameOver('Shox tegdi!');
+      handleGameOver();
       return;
     }
 
-    // New tree state: remove bottom, check next segment above
     const newTree = tree.slice(1);
     newTree.push({
       id: Date.now() + Math.random(),
       branch: getRandomBranch(),
     });
 
-    // Check if new bottom segment branch now hits the player
     if (newTree[0]?.branch === side) {
       setTree(newTree);
-      handleGameOver('Shox tegdi!');
+      handleGameOver();
       return;
     }
 
     setTree(newTree);
     setScore((s) => s + 1);
-    setTimeLeft((t) => Math.min(100, t + 4));
+    setTimeLeft((t) => Math.min(100, t + 4.5));
   };
 
-  const handleGameOver = (reason: string) => {
+  const handleGameOver = () => {
     tg.haptic('error');
     setGameOver(true);
     if (user) {
@@ -107,104 +102,87 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      {/* Header */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Timberjack (Daraxt kesish)</h2>
-          <span className="text-[10px] text-slate-400">Zarbalar: {score}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Timberjack</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Zarbalar: {score}</span>
         </div>
-        <button onClick={restart} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Time Progress */}
-        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden mb-2">
+        {/* Minimal progress */}
+        <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden mb-2">
           <div
-            className={`h-full transition-all duration-75 rounded-full ${
-              timeLeft > 50 ? 'bg-amber-400' : timeLeft > 25 ? 'bg-orange-500' : 'bg-rose-500'
-            }`}
+            className="h-full bg-zinc-300 transition-all duration-75"
             style={{ width: `${timeLeft}%` }}
           />
         </div>
 
-        {/* Tree & Woodcutter Stage */}
-        <div className="relative flex-1 bg-gradient-to-b from-slate-900 to-amber-950/20 border-2 border-slate-800 rounded-3xl p-4 shadow-2xl overflow-hidden flex flex-col justify-end items-center my-2">
-          {/* Tree Trunk Column */}
-          <div className="w-20 flex flex-col-reverse items-center relative mb-6">
-            {tree.map((seg, idx) => (
+        {/* Minimalist Tree Stage */}
+        <div className="relative flex-1 bg-zinc-900/30 border border-zinc-800/80 rounded-2xl overflow-hidden flex flex-col justify-end items-center my-2 pb-6">
+          {/* Tree Trunk */}
+          <div className="w-14 flex flex-col-reverse items-center relative">
+            {tree.map((seg) => (
               <div
                 key={seg.id}
-                className="w-16 h-12 bg-amber-800 border-x-2 border-amber-900 relative flex items-center justify-center shrink-0 shadow-sm"
+                className="w-12 h-11 bg-zinc-800 border-x border-zinc-700/80 relative flex items-center justify-center shrink-0"
               >
-                {/* Wood texture ring */}
-                <div className="w-full h-1 bg-amber-700/60" />
-
-                {/* Left Branch */}
+                {/* Branches */}
                 {seg.branch === 'left' && (
-                  <div className="absolute right-full top-2 w-16 h-8 bg-amber-900 rounded-l-full border-t border-b border-amber-700 shadow-md">
-                    <div className="w-6 h-6 bg-emerald-600 rounded-full -left-2 -top-1 absolute" />
-                  </div>
+                  <div className="absolute right-full top-2.5 w-12 h-5 bg-zinc-700 rounded-l-md" />
                 )}
-
-                {/* Right Branch */}
                 {seg.branch === 'right' && (
-                  <div className="absolute left-full top-2 w-16 h-8 bg-amber-900 rounded-r-full border-t border-b border-amber-700 shadow-md">
-                    <div className="w-6 h-6 bg-emerald-600 rounded-full -right-2 -top-1 absolute" />
-                  </div>
+                  <div className="absolute left-full top-2.5 w-12 h-5 bg-zinc-700 rounded-r-md" />
                 )}
               </div>
             ))}
           </div>
 
-          {/* Player Woodcutter */}
+          {/* Minimal Woodcutter */}
           <div
             className={`absolute bottom-6 transition-all duration-75 ${
-              playerSide === 'left' ? 'left-8' : 'right-8'
+              playerSide === 'left' ? 'left-10' : 'right-10'
             }`}
           >
-            <div className="w-12 h-14 bg-red-600 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold shadow-lg border border-red-500">
-              <span className="text-base">🧔</span>
-              <Axe size={16} className="text-amber-300" />
+            <div className="w-9 h-11 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-xs shadow-xs">
+              🪓
             </div>
           </div>
 
-          {/* Game Over dialog */}
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
-              <Trophy size={44} className="text-amber-400 mb-2" />
-              <h3 className="text-2xl font-black mb-1">O‘yin tugadi!</h3>
-              <p className="text-xs text-slate-400 mb-4">Kesilgan yog‘ochlar: <span className="font-bold text-amber-300">{score}</span></p>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">Natija: {score}</p>
               <button
                 onClick={restart}
-                className="py-3 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                className="py-2.5 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Qaytadan boshlash
+                Qayta boshlash
               </button>
             </div>
           )}
         </div>
 
-        {/* Chop Left / Right Buttons */}
-        <div className="grid grid-cols-2 gap-4 mt-2">
+        {/* Minimal Tap Controls */}
+        <div className="grid grid-cols-2 gap-2 mt-2">
           <button
             onClick={() => chop('left')}
-            className="py-6 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 active:scale-95 flex flex-col items-center justify-center font-bold text-sm shadow-md"
+            className="py-5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-medium text-xs active:scale-95 transition-all"
           >
-            <span className="text-2xl mb-1">👈</span>
-            <span>CHAPGA ZARBA</span>
+            Chapga
           </button>
           <button
             onClick={() => chop('right')}
-            className="py-6 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 active:scale-95 flex flex-col items-center justify-center font-bold text-sm shadow-md"
+            className="py-5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-medium text-xs active:scale-95 transition-all"
           >
-            <span className="text-2xl mb-1">👉</span>
-            <span>O‘NGGA ZARBA</span>
+            O‘ngga
           </button>
         </div>
       </div>

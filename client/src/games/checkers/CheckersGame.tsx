@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Bot, Users, Trophy, Crown } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Crown } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 
@@ -38,7 +38,7 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (vsBot && turn === 'black' && !winner) {
       const timer = setTimeout(() => {
         makeBotMove();
-      }, 500);
+      }, 450);
       return () => clearTimeout(timer);
     }
   }, [turn, vsBot, winner, board]);
@@ -77,7 +77,6 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    // No moves = white wins
     setWinner('white');
   };
 
@@ -88,13 +87,11 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const dr = r2 - r1;
     const dc = c2 - c1;
 
-    // Normal 1-step move
     if (Math.abs(dr) === 1 && Math.abs(dc) === 1) {
       if (piece.isKing) return true;
       return piece.side === 'white' ? dr === -1 : dr === 1;
     }
 
-    // 2-step jump capture
     if (Math.abs(dr) === 2 && Math.abs(dc) === 2) {
       const midR = (r1 + r2) / 2;
       const midC = (c1 + c2) / 2;
@@ -138,31 +135,26 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const piece = newBoard[r1][c1]!;
     newBoard[r1][c1] = null;
 
-    // Check King promotion
     if ((piece.side === 'white' && r2 === 0) || (piece.side === 'black' && r2 === 7)) {
       piece.isKing = true;
-      tg.haptic('medium');
     }
 
-    // Check if jump captured
     if (Math.abs(r2 - r1) === 2) {
       const midR = (r1 + r2) / 2;
       const midC = (c1 + c2) / 2;
       newBoard[midR][midC] = null;
-      tg.haptic('heavy');
     }
 
     newBoard[r2][c2] = piece;
     setBoard(newBoard);
 
-    // Check if any pieces remaining for opponent
     const nextTurn = turn === 'white' ? 'black' : 'white';
     const opponentPieces = newBoard.flat().filter((p) => p?.side === nextTurn);
 
     if (opponentPieces.length === 0) {
       setWinner(turn);
       if (turn === 'white') {
-        confetti({ particleCount: 90, spread: 80 });
+        confetti({ particleCount: 50, spread: 60 });
         tg.haptic('success');
         if (user) updateCoins(user.coins + 25);
       }
@@ -180,39 +172,52 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Shashka (Checkers)</h2>
-          <span className="text-[10px] text-slate-400">Navbat: {turn === 'white' ? 'Oqlar' : 'Qoralar'}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Shashka</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {turn === 'white' ? 'Oqlar navbati' : 'Qoralar navbati'}
+          </span>
         </div>
-        <button onClick={restart} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-2.5">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-slate-400">Rejim:</span>
+        {/* Minimal mode toggle */}
+        <div className="flex items-center justify-between py-1">
+          <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
             <button
-              onClick={() => setVsBot(!vsBot)}
-              className="px-3 py-1 bg-slate-800 text-blue-400 font-bold rounded-lg text-xs"
+              onClick={() => setVsBot(true)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                vsBot ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
+              }`}
             >
-              {vsBot ? '🤖 Botga qarshi' : '👥 1v1 Lokal'}
+              Bot
+            </button>
+            <button
+              onClick={() => setVsBot(false)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                !vsBot ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
+              }`}
+            >
+              Lokal
             </button>
           </div>
-          <span className="text-xs font-bold text-slate-300">
-            {turn === 'white' ? '⚪ Oqlar yurishi' : '⚫ Qoralar yurishi'}
+
+          <span className="text-[11px] font-mono text-zinc-400">
+            {turn === 'white' ? '⚪ Siz' : '⚫ Raqib'}
           </span>
         </div>
 
-        {/* 8x8 Board */}
-        <div className="relative aspect-square w-full bg-slate-900 border-2 border-slate-800 rounded-3xl p-2 shadow-2xl my-auto">
-          <div className="grid grid-cols-8 grid-rows-8 w-full h-full rounded-2xl overflow-hidden">
+        {/* Minimal 8x8 Board */}
+        <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-zinc-800 my-auto shadow-md">
+          <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
             {board.map((row, r) =>
               row.map((cell, c) => {
                 const isDark = (r + c) % 2 === 1;
@@ -222,19 +227,19 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   <div
                     key={`${r}-${c}`}
                     onClick={() => handleSquareClick(r, c)}
-                    className={`relative flex items-center justify-center cursor-pointer ${
-                      isDark ? 'bg-amber-900/80' : 'bg-amber-100/90'
-                    } ${isSelected ? '!bg-amber-400' : ''}`}
+                    className={`relative flex items-center justify-center cursor-pointer transition-colors ${
+                      isDark ? 'bg-[#27272a]' : 'bg-[#18181b]'
+                    } ${isSelected ? '!bg-zinc-600' : ''}`}
                   >
                     {cell && (
                       <div
-                        className={`w-4/5 h-4/5 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                        className={`w-3/4 h-3/4 rounded-full flex items-center justify-center shadow-xs transition-transform ${
                           cell.side === 'white'
-                            ? 'bg-slate-100 border-2 border-slate-300 text-slate-900'
-                            : 'bg-slate-950 border-2 border-slate-700 text-amber-400'
-                        } ${isSelected ? 'scale-110' : ''}`}
+                            ? 'bg-zinc-100 border border-white text-zinc-900'
+                            : 'bg-zinc-800 border border-zinc-600 text-zinc-300'
+                        } ${isSelected ? 'scale-105' : ''}`}
                       >
-                        {cell.isKing && <Crown size={14} className="fill-current" />}
+                        {cell.isKing && <Crown size={12} className="stroke-[2.5]" />}
                       </div>
                     )}
                   </div>
@@ -245,13 +250,13 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </div>
 
         {winner && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center mt-2">
-            <h3 className="text-lg font-bold">
-              {winner === 'white' ? 'Oqlar g‘alaba qozondi! 🎉' : 'Qoralar g‘alaba qozondi! 🤖'}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center mt-2 animate-fade-in">
+            <h3 className="text-sm font-semibold text-zinc-100">
+              {winner === 'white' ? 'Oqlar g‘alaba qozondi' : 'Qoralar g‘alaba qozondi'}
             </h3>
             <button
               onClick={restart}
-              className="mt-2 py-2 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-xs"
+              className="mt-2.5 py-1.5 px-4 rounded-lg bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
             >
               Qayta o‘ynash
             </button>

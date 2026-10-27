@@ -6,7 +6,6 @@ import { tg } from '../services/telegram.js';
 export const BottomNav: React.FC = () => {
   const { activeTab, setActiveTab, selectedGame } = useAppStore();
 
-  // Hide bottom nav if inside an active game session
   if (selectedGame) return null;
 
   const tabs = [
@@ -22,7 +21,7 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800/80 px-2 py-2 flex items-center justify-around safe-bottom shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800/80 px-2 py-1.5 flex items-center justify-around safe-bottom">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -30,19 +29,12 @@ export const BottomNav: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`flex flex-col items-center justify-center flex-1 py-1 px-2 rounded-xl transition-all duration-200 active:scale-95 ${
-              isActive
-                ? 'text-blue-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-colors active:scale-95 ${
+              isActive ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-400'
             }`}
           >
-            <div className={`relative p-1 rounded-lg transition-transform ${isActive ? 'scale-110' : ''}`}>
-              <Icon size={22} className={isActive ? 'stroke-[2.5]' : 'stroke-2'} />
-              {isActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-              )}
-            </div>
-            <span className="text-[11px] mt-0.5 tracking-tight">{tab.label}</span>
+            <Icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
+            <span className="text-[10px] mt-1 font-medium tracking-tight">{tab.label}</span>
           </button>
         );
       })}

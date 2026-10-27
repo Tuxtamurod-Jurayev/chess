@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Chess, Square } from 'chess.js';
+import React, { useState, useEffect } from 'react';
+import { Chess, type Square } from 'chess.js';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Bot, Flag, Volume2, VolumeX, ShieldAlert, Trophy } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Flag } from 'lucide-react';
 import { ChessPieceIcon } from './ChessPieces.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
@@ -12,7 +12,7 @@ interface ChessGameProps {
 }
 
 export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
-  const { user, activeRoom, setMatchmaking, updateCoins } = useAppStore();
+  const { user, setMatchmaking, updateCoins } = useAppStore();
 
   const [chess] = useState(() => new Chess());
   const [fen, setFen] = useState(chess.fen());
@@ -23,7 +23,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   const [gameStarted, setGameStarted] = useState(false);
 
   // Timers (in seconds)
-  const [whiteTimer, setWhiteTimer] = useState(300); // 5 mins
+  const [whiteTimer, setWhiteTimer] = useState(300);
   const [blackTimer, setBlackTimer] = useState(300);
   const [activeTimerSide, setActiveTimerSide] = useState<'w' | 'b'>('w');
 
@@ -33,17 +33,12 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     reason: string;
   } | null>(null);
 
-  // Setup Telegram Back Button
   useEffect(() => {
-    tg.setBackButton(() => {
-      onBack();
-    });
-    return () => {
-      tg.setBackButton(undefined);
-    };
+    tg.setBackButton(() => onBack());
+    return () => tg.setBackButton(undefined);
   }, [onBack]);
 
-  // Timer interval
+  // Timers
   useEffect(() => {
     if (!gameStarted || gameOverResult) return;
 
@@ -51,7 +46,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
       if (activeTimerSide === 'w') {
         setWhiteTimer((t) => {
           if (t <= 1) {
-            handleGameOver('b', 'Vaqt tugadi (Oqlar yutqazdi)');
+            handleGameOver('b', 'Vaqt tugadi');
             return 0;
           }
           return t - 1;
@@ -59,7 +54,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
       } else {
         setBlackTimer((t) => {
           if (t <= 1) {
-            handleGameOver('w', 'Vaqt tugadi (Qoralar yutqazdi)');
+            handleGameOver('w', 'Vaqt tugadi');
             return 0;
           }
           return t - 1;
@@ -70,13 +65,12 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     return () => clearInterval(interval);
   }, [gameStarted, activeTimerSide, gameOverResult]);
 
-  // Bot move trigger
+  // Bot move
   useEffect(() => {
     if (gameMode === 'bot' && gameStarted && !gameOverResult && chess.turn() === 'b') {
-      const delay = Math.floor(Math.random() * 400) + 500;
       const timeout = setTimeout(() => {
         makeBotMove();
-      }, delay);
+      }, 500);
       return () => clearTimeout(timeout);
     }
   }, [fen, gameMode, gameStarted, gameOverResult]);
@@ -89,7 +83,6 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     if (botLevel === 'easy') {
       chosenMove = moves[Math.floor(Math.random() * moves.length)];
     } else {
-      // Medium / Hard: prefer captures or checks
       const captures = moves.filter((m) => m.captured);
       const checks = moves.filter((m) => m.san.includes('+'));
 
@@ -116,13 +109,10 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
 
   const handleSquareClick = (square: Square) => {
     if (!gameStarted || gameOverResult) return;
-
-    // Disallow moving black if playing against bot
     if (gameMode === 'bot' && chess.turn() === 'b') return;
 
     const piece = chess.get(square);
 
-    // If square is already selected, unselect or move
     if (selectedSquare) {
       if (selectedSquare === square) {
         setSelectedSquare(null);
@@ -130,7 +120,6 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
         return;
       }
 
-      // Try making the move
       try {
         const move = chess.move({
           from: selectedSquare,
@@ -139,7 +128,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
         });
 
         if (move) {
-          tg.haptic(move.captured ? 'heavy' : 'medium');
+          tg.haptic('light');
           setFen(chess.fen());
           setSelectedSquare(null);
           setValidMoves([]);
@@ -148,11 +137,10 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           return;
         }
       } catch {
-        // Illegal move, continue
+        // illegal move
       }
     }
 
-    // Select piece if it's the current player's piece
     if (piece && piece.color === chess.turn()) {
       tg.haptic('select');
       setSelectedSquare(square);
@@ -168,13 +156,9 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     if (chess.isGameOver()) {
       if (chess.isCheckmate()) {
         const winner = chess.turn() === 'w' ? 'b' : 'w';
-        handleGameOver(winner, 'Mot! (Checkmate)');
+        handleGameOver(winner, 'Mot (Checkmate)');
       } else if (chess.isDraw()) {
-        let reason = 'Durrang!';
-        if (chess.isStalemate()) reason = 'Pat (Stalemate)!';
-        else if (chess.isThreefoldRepetition()) reason = '3 karra takrorlanish!';
-        else if (chess.isInsufficientMaterial()) reason = 'Yetarsiz donalar!';
-        handleGameOver('draw', reason);
+        handleGameOver('draw', 'Durrang');
       }
     }
   };
@@ -182,17 +166,11 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   const handleGameOver = (winner: 'w' | 'b' | 'draw', reason: string) => {
     setGameOverResult({ winner, reason });
     if (winner === 'w' && user) {
-      confetti({
-        particleCount: 100,
-        spread: 80,
-        origin: { y: 0.6 },
-      });
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       tg.haptic('success');
       updateCoins(user.coins + 30);
-    } else if (winner === 'draw') {
-      tg.haptic('warning');
     } else {
-      tg.haptic('error');
+      tg.haptic(winner === 'draw' ? 'warning' : 'error');
     }
   };
 
@@ -215,66 +193,58 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Board files and ranks
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
       {/* Top Navbar */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
         <button
           onClick={onBack}
-          className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95"
+          className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg transition-colors active:scale-95"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Shaxmat (FIDE)</h2>
-          <span className="text-[10px] text-slate-400">
-            {gameMode === 'bot'
-              ? `Botga qarshi (${botLevel.toUpperCase()})`
-              : gameMode === 'pvp'
-              ? '1v1 Onlayn'
-              : 'Birgalikda o‘yin'}
+          <h2 className="text-xs font-semibold text-zinc-100">Shaxmat</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {gameMode === 'bot' ? `Bot (${botLevel})` : '1v1'}
           </span>
         </div>
         <button
           onClick={restartGame}
-          className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95"
-          title="Qayta boshlash"
+          className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg transition-colors active:scale-95"
+          title="Qayta"
         >
-          <RotateCcw size={18} />
+          <RotateCcw size={16} />
         </button>
       </div>
 
       {!gameStarted ? (
-        /* Game Setup Lobby */
-        <div className="flex-1 p-6 flex flex-col justify-center max-w-sm mx-auto w-full">
-          <div className="text-center mb-6">
-            <div className="w-20 h-20 mx-auto mb-3 rounded-3xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-blue-500/10">
-              <Bot size={40} className="text-blue-400" />
-            </div>
-            <h2 className="text-xl font-bold">O‘yin rejimini tanlang</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Reytingingizni oshiring yoki bot bilan mashq qiling
-            </p>
+        /* Minimal Lobby */
+        <div className="flex-1 p-5 flex flex-col justify-center max-w-sm mx-auto w-full space-y-4">
+          <div className="text-center mb-2">
+            <h2 className="text-base font-bold text-zinc-100">O‘yin Rejimi</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Shaxmat partiyasini boshlash</p>
           </div>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-2">
             <button
               onClick={() => {
                 setGameMode('bot');
                 setGameStarted(true);
                 tg.haptic('medium');
               }}
-              className="w-full p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 font-bold text-left flex items-center justify-between shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all"
+              className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all"
             >
               <div>
-                <span className="block text-sm">🤖 Botga qarshi o‘ynash</span>
-                <span className="text-[11px] text-blue-200 font-normal">Tezkor mashg‘ulot va taktikalar</span>
+                <span className="block text-xs font-semibold text-zinc-200">Botga qarshi</span>
+                <span className="text-[10px] text-zinc-500">Mashq qilish rejimi</span>
               </div>
-              <span className="text-xs px-2.5 py-1 bg-white/20 rounded-full">Easy / Med</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400">
+                {botLevel.toUpperCase()}
+              </span>
             </button>
 
             <button
@@ -285,13 +255,15 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                   socket.emit('join_queue', { userId: user.id, gameId: 'chess' });
                 }
               }}
-              className="w-full p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/50 font-bold text-left flex items-center justify-between active:scale-[0.98] transition-all"
+              className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all"
             >
               <div>
-                <span className="block text-sm text-white">🌐 1v1 Onlayn Matchmaking</span>
-                <span className="text-[11px] text-slate-400 font-normal">Tasodifiy onlayn raqib bilan ELO jangi</span>
+                <span className="block text-xs font-semibold text-zinc-200">1v1 Onlayn</span>
+                <span className="text-[10px] text-zinc-500">Tasodifiy o‘yinchi qidirish</span>
               </div>
-              <span className="text-xs px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-full font-mono">1200 ELO</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400">
+                1200 ELO
+              </span>
             </button>
 
             <button
@@ -300,28 +272,32 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                 setGameStarted(true);
                 tg.haptic('medium');
               }}
-              className="w-full p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 font-bold text-left flex items-center justify-between active:scale-[0.98] transition-all"
+              className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all"
             >
               <div>
-                <span className="block text-sm text-white">👥 Bitta ekranda o‘ynash</span>
-                <span className="text-[11px] text-slate-400 font-normal">Do‘stingiz bilan navbatma-navbat</span>
+                <span className="block text-xs font-semibold text-zinc-200">Lokal (1 ekran)</span>
+                <span className="text-[10px] text-zinc-500">Bitta telefonda ikki kishi</span>
               </div>
-              <span className="text-xs px-2.5 py-1 bg-slate-800 text-slate-300 rounded-full">Lokal</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400">
+                2P
+              </span>
             </button>
           </div>
 
-          {/* Bot Level selector */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
-            <span className="text-[11px] text-slate-400 block mb-2 font-medium">Bot qiyinlik darajasi:</span>
-            <div className="grid grid-cols-3 gap-2">
+          {/* Bot Level */}
+          <div className="pt-2">
+            <span className="text-[10px] font-medium text-zinc-500 block mb-1.5 uppercase tracking-wider">
+              Bot darajasi:
+            </span>
+            <div className="grid grid-cols-3 gap-1.5">
               {(['easy', 'medium', 'hard'] as const).map((lvl) => (
                 <button
                   key={lvl}
                   onClick={() => setBotLevel(lvl)}
-                  className={`py-2 rounded-xl text-xs font-bold capitalize transition-all ${
+                  className={`py-1.5 rounded-lg text-xs font-medium transition-all ${
                     botLevel === lvl
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                      ? 'bg-zinc-100 text-zinc-950'
+                      : 'bg-zinc-900 border border-zinc-800/80 text-zinc-400'
                   }`}
                 >
                   {lvl === 'easy' ? 'Oson' : lvl === 'medium' ? 'O‘rta' : 'Qiyin'}
@@ -331,41 +307,37 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
         </div>
       ) : (
-        /* Active Chess Board Screen */
-        <div className="flex-1 flex flex-col justify-between p-3 max-w-md mx-auto w-full">
-          {/* Top Player (Black) */}
-          <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800/80 rounded-2xl px-3.5 py-2 mb-2">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-slate-200 border border-slate-700">
-                {gameMode === 'bot' ? '🤖' : '♟'}
+        /* Active Board */
+        <div className="flex-1 flex flex-col justify-between p-3.5 max-w-sm mx-auto w-full">
+          {/* Top (Black) */}
+          <div className="flex items-center justify-between py-1.5 px-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-mono">
+                {gameMode === 'bot' ? 'AI' : 'B'}
               </div>
-              <div>
-                <span className="text-xs font-bold block text-slate-200">
-                  {gameMode === 'bot' ? `AI Bot (${botLevel})` : 'Qoralar (Black)'}
-                </span>
-                <span className="text-[10px] text-slate-400">Reyting: 1400</span>
-              </div>
+              <span className="text-xs font-medium text-zinc-300">
+                {gameMode === 'bot' ? 'Bot' : 'Qoralar'}
+              </span>
             </div>
 
-            {/* Black Timer */}
             <div
-              className={`px-3 py-1 rounded-xl font-mono text-sm font-bold border transition-colors ${
+              className={`font-mono text-xs px-2 py-0.5 rounded-md border ${
                 activeTimerSide === 'b'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse-subtle'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                  ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-100'
+                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
               }`}
             >
               {formatTimer(blackTimer)}
             </div>
           </div>
 
-          {/* 8x8 Chessboard */}
-          <div className="relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl bg-slate-800">
+          {/* Minimal 8x8 Chessboard */}
+          <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-zinc-800 shadow-md">
             <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
               {ranks.map((rank, rIdx) =>
                 files.map((file, fIdx) => {
                   const square = `${file}${rank}` as Square;
-                  const isBlackSquare = (rIdx + fIdx) % 2 === 1;
+                  const isDark = (rIdx + fIdx) % 2 === 1;
                   const piece = chess.get(square);
                   const isSelected = selectedSquare === square;
                   const isValidTarget = validMoves.includes(square);
@@ -375,48 +347,40 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                     <div
                       key={square}
                       onClick={() => handleSquareClick(square)}
-                      className={`relative flex items-center justify-center transition-colors cursor-pointer ${
-                        isBlackSquare ? 'bg-[#779952]' : 'bg-[#edeed1]'
-                      } ${isSelected ? '!bg-amber-300/80' : ''} ${
-                        isCheck ? '!bg-rose-500/90' : ''
+                      className={`relative flex items-center justify-center cursor-pointer transition-colors ${
+                        isDark ? 'bg-[#27272a]' : 'bg-[#3f3f46]'
+                      } ${isSelected ? '!bg-zinc-500/80' : ''} ${
+                        isCheck ? '!bg-rose-900/60' : ''
                       }`}
                     >
-                      {/* Rank & File labels */}
+                      {/* Subdued Rank/File labels */}
                       {fIdx === 0 && (
-                        <span
-                          className={`absolute top-0.5 left-1 text-[9px] font-bold ${
-                            isBlackSquare ? 'text-[#edeed1]' : 'text-[#779952]'
-                          }`}
-                        >
+                        <span className="absolute top-0.5 left-1 text-[8px] font-mono opacity-30 pointer-events-none">
                           {rank}
                         </span>
                       )}
                       {rIdx === 7 && (
-                        <span
-                          className={`absolute bottom-0.5 right-1 text-[9px] font-bold ${
-                            isBlackSquare ? 'text-[#edeed1]' : 'text-[#779952]'
-                          }`}
-                        >
+                        <span className="absolute bottom-0.5 right-1 text-[8px] font-mono opacity-30 pointer-events-none">
                           {file}
                         </span>
                       )}
 
                       {/* Piece */}
                       {piece && (
-                        <div className="w-[85%] h-[85%] z-10 drop-shadow-md">
+                        <div className="w-[82%] h-[82%] z-10">
                           <ChessPieceIcon
                             piece={piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()}
                           />
                         </div>
                       )}
 
-                      {/* Move dot indicator */}
+                      {/* Move dot */}
                       {isValidTarget && (
                         <div
                           className={`absolute z-20 rounded-full ${
                             piece
-                              ? 'w-full h-full border-4 border-black/30 bg-rose-500/20'
-                              : 'w-3 h-3 bg-black/25'
+                              ? 'w-full h-full border-2 border-zinc-100/40 bg-zinc-100/10'
+                              : 'w-2.5 h-2.5 bg-zinc-100/40'
                           }`}
                         />
                       )}
@@ -427,108 +391,77 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Bottom Player (White - You) */}
-          <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800/80 rounded-2xl px-3.5 py-2 mt-2">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center font-bold text-blue-300">
-                {user?.firstName ? user.firstName[0].toUpperCase() : 'S'}
+          {/* Bottom (White) */}
+          <div className="flex items-center justify-between py-1.5 px-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-md bg-zinc-200 border border-white flex items-center justify-center text-[10px] text-zinc-950 font-bold font-mono">
+                W
               </div>
-              <div>
-                <span className="text-xs font-bold block text-white">
-                  {user?.firstName || 'Siz'} (Oqlar)
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  ELO: {user?.eloRating?.chess || 1200}
-                </span>
-              </div>
+              <span className="text-xs font-medium text-zinc-100">
+                {user?.firstName || 'Siz'} (Oqlar)
+              </span>
             </div>
 
-            {/* White Timer */}
             <div
-              className={`px-3 py-1 rounded-xl font-mono text-sm font-bold border transition-colors ${
+              className={`font-mono text-xs px-2 py-0.5 rounded-md border ${
                 activeTimerSide === 'w'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse-subtle'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                  ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-100'
+                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
               }`}
             >
               {formatTimer(whiteTimer)}
             </div>
           </div>
 
-          {/* Bottom Controls */}
-          <div className="mt-3 flex items-center justify-between">
+          {/* Footer Controls */}
+          <div className="pt-2 flex items-center justify-between border-t border-zinc-800/80">
             <button
-              onClick={() => handleGameOver('b', 'Siz taslim bo‘ldingiz')}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all"
+              onClick={() => handleGameOver('b', 'Taslim bo‘ldingiz')}
+              className="px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-rose-400 transition-colors flex items-center space-x-1"
             >
-              <Flag size={14} />
-              <span>Taslim bo‘lish</span>
+              <Flag size={12} />
+              <span>Taslim</span>
             </button>
 
-            <div className="text-xs text-slate-400 font-medium">
-              Navbat:{' '}
-              <span className="font-bold text-white">
-                {chess.turn() === 'w' ? 'Oqlar' : 'Qoralar'}
-              </span>
-            </div>
+            <span className="text-[11px] font-mono text-zinc-500">
+              Navbat: {chess.turn() === 'w' ? 'Oqlar' : 'Qoralar'}
+            </span>
 
             <button
               onClick={restartGame}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:bg-slate-800 active:scale-95 transition-all"
+              className="px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-white transition-colors flex items-center space-x-1"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={12} />
               <span>Qayta</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Game Over Modal */}
+      {/* Result Modal */}
       {gameOverResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl animate-fade-in">
-            <div
-              className={`w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center shadow-lg ${
-                gameOverResult.winner === 'w'
-                  ? 'bg-yellow-500/20 border border-yellow-500/40 text-yellow-400'
-                  : gameOverResult.winner === 'draw'
-                  ? 'bg-slate-700/30 border border-slate-600 text-slate-300'
-                  : 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
-              }`}
-            >
-              <Trophy size={32} />
-            </div>
-
-            <h3 className="text-xl font-bold mb-1">
-              {gameOverResult.winner === 'w'
-                ? 'G‘alaba qozondingiz! 🎉'
-                : gameOverResult.winner === 'draw'
-                ? 'Durrang natija! 🤝'
-                : 'Mag‘lubiyat! ⚔️'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 text-center shadow-xl animate-fade-in">
+            <h3 className="text-base font-bold text-zinc-100 mb-1">
+              {gameOverResult.winner === 'w' ? 'G‘alaba' : gameOverResult.winner === 'draw' ? 'Durrang' : 'Mag‘lubiyat'}
             </h3>
-            <p className="text-xs text-slate-400 mb-4">{gameOverResult.reason}</p>
+            <p className="text-xs text-zinc-500 mb-4">{gameOverResult.reason}</p>
 
-            {gameOverResult.winner === 'w' && (
-              <div className="inline-block px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-bold text-yellow-300 mb-6">
-                Mukofot: +30 tanga & +16 ELO
-              </div>
-            )}
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <button
                 onClick={restartGame}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all"
+                className="w-full py-2.5 px-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs active:scale-95 transition-all"
               >
-                Yana o‘ynash
+                Qayta o‘ynash
               </button>
               <button
                 onClick={() => {
                   setGameOverResult(null);
                   setGameStarted(false);
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 active:scale-95 transition-all"
+                className="w-full py-2 px-4 rounded-xl text-zinc-400 hover:text-zinc-200 text-xs active:scale-95 transition-all"
               >
-                Lobbiyga qaytish
+                Chiqish
               </button>
             </div>
           </div>

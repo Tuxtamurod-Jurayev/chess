@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Bot, Users, Trophy } from 'lucide-react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 
@@ -22,13 +22,11 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setWinningLine(null);
   }, [size, totalCells]);
 
-  // Bot move
   useEffect(() => {
     if (vsBot && !isXNext && !winner) {
-      const delay = 400;
       const timer = setTimeout(() => {
         makeBotMove();
-      }, delay);
+      }, 400);
       return () => clearTimeout(timer);
     }
   }, [isXNext, vsBot, winner, board]);
@@ -40,7 +38,6 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     if (emptyIndices.length === 0) return;
 
-    // Check if bot can win immediately
     for (const idx of emptyIndices) {
       const copy = [...board];
       copy[idx] = 'O';
@@ -50,7 +47,6 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    // Check if player can win next, and block
     for (const idx of emptyIndices) {
       const copy = [...board];
       copy[idx] = 'X';
@@ -60,13 +56,11 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    // Prefer center in 3x3
     if (size === 3 && board[4] === null) {
       commitMove(4, 'O');
       return;
     }
 
-    // Random choice
     const chosen = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
     commitMove(chosen, 'O');
   };
@@ -89,11 +83,9 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       setWinner(winResult.symbol);
       setWinningLine(winResult.line);
       if (winResult.symbol === 'X') {
-        confetti({ particleCount: 80, spread: 70 });
+        confetti({ particleCount: 50, spread: 60 });
         tg.haptic('success');
         if (user) updateCoins(user.coins + 15);
-      } else {
-        tg.haptic('error');
       }
     } else if (newBoard.every((cell) => cell !== null)) {
       setWinner('draw');
@@ -116,22 +108,18 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
       }
     } else {
-      // 5x5: need 4 in a row
-      // Rows
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c <= 1; c++) {
           const l = [r * 5 + c, r * 5 + c + 1, r * 5 + c + 2, r * 5 + c + 3];
           if (b[l[0]] && l.every((i) => b[i] === b[l[0]])) return { symbol: b[l[0]]!, line: l };
         }
       }
-      // Cols
       for (let c = 0; c < 5; c++) {
         for (let r = 0; r <= 1; r++) {
           const l = [r * 5 + c, (r + 1) * 5 + c, (r + 2) * 5 + c, (r + 3) * 5 + c];
           if (b[l[0]] && l.every((i) => b[i] === b[l[0]])) return { symbol: b[l[0]]!, line: l };
         }
       }
-      // Diagonals
       for (let r = 0; r <= 1; r++) {
         for (let c = 0; c <= 1; c++) {
           const d1 = [r * 5 + c, (r + 1) * 5 + c + 1, (r + 2) * 5 + c + 2, (r + 3) * 5 + c + 3];
@@ -155,100 +143,91 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      {/* Header */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Tic-Tac-Toe ({size}x{size})</h2>
-          <span className="text-[10px] text-slate-400">{vsBot ? 'Botga qarshi' : '1v1 Lokal'}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Tic-Tac-Toe ({size}x{size})</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            Navbat: {isXNext ? 'X (Siz)' : 'O (Raqib)'}
+          </span>
         </div>
-        <button onClick={resetGame} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={resetGame} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Mode & Grid Size selectors */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
+        {/* Minimal Selectors */}
+        <div className="flex items-center justify-between py-1">
+          <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
             <button
               onClick={() => setSize(3)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                size === 3 ? 'bg-blue-600 text-white' : 'text-slate-400'
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                size === 3 ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
               }`}
             >
               3x3
             </button>
             <button
               onClick={() => setSize(5)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                size === 5 ? 'bg-blue-600 text-white' : 'text-slate-400'
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                size === 5 ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
               }`}
             >
               5x5
             </button>
           </div>
 
-          <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
+          <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
             <button
               onClick={() => setVsBot(true)}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                vsBot ? 'bg-indigo-600 text-white' : 'text-slate-400'
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                vsBot ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
               }`}
             >
-              <Bot size={13} />
-              <span>Bot</span>
+              Bot
             </button>
             <button
               onClick={() => setVsBot(false)}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                !vsBot ? 'bg-indigo-600 text-white' : 'text-slate-400'
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                !vsBot ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500'
               }`}
             >
-              <Users size={13} />
-              <span>1v1</span>
+              Lokal
             </button>
           </div>
         </div>
 
-        {/* Turn indicator */}
-        <div className="text-center my-3">
-          <span className="text-xs text-slate-400">Navbat: </span>
-          <span className={`font-black text-sm ${isXNext ? 'text-blue-400' : 'text-pink-400'}`}>
-            {isXNext ? 'X (Siz)' : vsBot ? 'O (Bot)' : 'O (Do‘st)'}
-          </span>
-        </div>
-
-        {/* Board Grid */}
-        <div className="relative aspect-square w-full bg-slate-900 border-2 border-slate-800 rounded-3xl p-3 shadow-2xl flex items-center justify-center">
+        {/* Minimal Board */}
+        <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-zinc-800 p-2 my-auto shadow-md bg-zinc-900/30">
           <div
-            className={`grid gap-2.5 w-full h-full ${
+            className={`grid gap-1.5 w-full h-full ${
               size === 3 ? 'grid-cols-3 grid-rows-3' : 'grid-cols-5 grid-rows-5'
             }`}
           >
             {board.map((cell, idx) => {
-              const isWinningCell = winningLine?.includes(idx);
+              const isWinning = winningLine?.includes(idx);
               return (
                 <button
                   key={idx}
                   onClick={() => handleCellClick(idx)}
-                  className={`rounded-2xl flex items-center justify-center font-black transition-all active:scale-95 shadow-sm border ${
-                    isWinningCell
-                      ? 'bg-amber-400/20 border-amber-400 animate-pulse'
-                      : 'bg-slate-800/80 border-slate-700/60 hover:bg-slate-700/80'
+                  className={`rounded-xl flex items-center justify-center font-mono font-bold transition-all border ${
+                    isWinning
+                      ? 'bg-zinc-700/80 border-zinc-500 text-white'
+                      : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850'
                   }`}
                 >
                   {cell === 'X' && (
-                    <span className={`text-blue-400 drop-shadow-md ${size === 3 ? 'text-4xl' : 'text-2xl'}`}>
-                      X
+                    <span className={`text-zinc-100 font-light ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
+                      ✕
                     </span>
                   )}
                   {cell === 'O' && (
-                    <span className={`text-pink-400 drop-shadow-md ${size === 3 ? 'text-4xl' : 'text-2xl'}`}>
-                      O
+                    <span className={`text-zinc-400 font-light ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
+                      ◯
                     </span>
                   )}
                 </button>
@@ -257,17 +236,16 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Result Overlay */}
         {winner && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center mt-4">
-            <h3 className="text-lg font-bold">
-              {winner === 'X' ? 'X g‘alaba qozondi! 🎉' : winner === 'O' ? 'O g‘alaba qozondi! 🤖' : 'Durrang! 🤝'}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-center mt-2 animate-fade-in">
+            <h3 className="text-sm font-semibold text-zinc-100">
+              {winner === 'X' ? 'X g‘alaba qozondi' : winner === 'O' ? 'O g‘alaba qozondi' : 'Durrang natija'}
             </h3>
             <button
               onClick={resetGame}
-              className="mt-2 py-2 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-xs active:scale-95"
+              className="mt-2 py-1.5 px-4 rounded-lg bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
             >
-              Yana o‘ynash
+              Qayta o‘ynash
             </button>
           </div>
         )}

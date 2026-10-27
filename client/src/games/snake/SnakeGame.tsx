@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { ArrowLeft, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -49,7 +48,6 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     else if (newDir === 'RIGHT' && cur !== 'LEFT') setDirection('RIGHT');
   };
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp') changeDirection('UP');
@@ -61,7 +59,6 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameStarted]);
 
-  // Game loop
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
@@ -76,13 +73,11 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         else if (dir === 'LEFT') head.x -= 1;
         else if (dir === 'RIGHT') head.x += 1;
 
-        // Check wall collision
         if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
           handleDeath();
           return prevSnake;
         }
 
-        // Check self collision
         if (prevSnake.some((seg) => seg.x === head.x && seg.y === head.y)) {
           handleDeath();
           return prevSnake;
@@ -90,7 +85,6 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
         const newSnake = [head, ...prevSnake];
 
-        // Check food collision
         if (head.x === food.x && head.y === food.y) {
           tg.haptic('medium');
           setScore((s) => s + 10);
@@ -130,24 +124,22 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      {/* Header */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Snake (Iloncha)</h2>
-          <span className="text-[10px] text-slate-400">Ochko: {score}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Iloncha (Snake)</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Ball: {score}</span>
         </div>
-        <button onClick={restartGame} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restartGame} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Canvas / Grid Area */}
-        <div className="relative aspect-square w-full bg-slate-900 border-2 border-slate-800 rounded-3xl p-2 shadow-2xl overflow-hidden">
+        <div className="relative aspect-square w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl p-2 shadow-md overflow-hidden">
           <div
             className="grid w-full h-full"
             style={{
@@ -166,74 +158,70 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               return (
                 <div key={idx} className="flex items-center justify-center">
                   {isHead && (
-                    <div className="w-[90%] h-[90%] bg-emerald-400 rounded-md shadow-sm border border-emerald-300" />
+                    <div className="w-[85%] h-[85%] bg-zinc-100 rounded-xs shadow-xs" />
                   )}
                   {isBody && (
-                    <div className="w-[85%] h-[85%] bg-emerald-600 rounded-sm" />
+                    <div className="w-[80%] h-[80%] bg-zinc-500 rounded-xs" />
                   )}
                   {isFood && (
-                    <div className="w-[85%] h-[85%] bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-500/50" />
+                    <div className="w-[60%] h-[60%] bg-amber-400 rounded-full" />
                   )}
                 </div>
               );
             })}
           </div>
 
-          {/* Start message if not started */}
           {!gameStarted && !gameOver && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
-              <span className="text-sm font-bold mb-2">Boshlash uchun tugmalardan birini bosing</span>
               <button
                 onClick={() => setGameStarted(true)}
-                className="py-2.5 px-6 bg-emerald-600 rounded-xl font-bold text-xs shadow-md"
+                className="py-2 px-5 bg-zinc-100 text-zinc-950 rounded-xl font-semibold text-xs active:scale-95"
               >
                 Boshlash
               </button>
             </div>
           )}
 
-          {/* Game Over modal */}
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
-              <Trophy size={40} className="text-amber-400 mb-2" />
-              <h3 className="text-xl font-black mb-1">O‘yin tugadi!</h3>
-              <p className="text-xs text-slate-400 mb-4">To‘plangan ochko: <span className="text-emerald-400 font-bold">{score}</span></p>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">Ball: {score}</p>
               <button
                 onClick={restartGame}
-                className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs"
+                className="py-2 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Qaytadan o‘ynash
+                Qayta o‘ynash
               </button>
             </div>
           )}
         </div>
 
-        {/* D-Pad Controls */}
-        <div className="mt-4 flex flex-col items-center">
+        {/* Minimal D-Pad */}
+        <div className="mt-3 flex flex-col items-center">
           <button
             onClick={() => changeDirection('UP')}
-            className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-emerald-600 active:scale-95 mb-1.5 shadow-sm"
+            className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 mb-1 text-zinc-400"
           >
-            <ChevronUp size={24} />
+            <ChevronUp size={20} />
           </button>
-          <div className="flex space-x-6">
+          <div className="flex space-x-4">
             <button
               onClick={() => changeDirection('LEFT')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-emerald-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={20} />
             </button>
             <button
               onClick={() => changeDirection('DOWN')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-emerald-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronDown size={24} />
+              <ChevronDown size={20} />
             </button>
             <button
               onClick={() => changeDirection('RIGHT')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-emerald-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={20} />
             </button>
           </div>
         </div>

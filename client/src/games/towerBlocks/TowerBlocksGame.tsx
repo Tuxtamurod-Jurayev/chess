@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Trophy, Layers } from 'lucide-react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -18,8 +17,8 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
 
-  const blockHeight = 24;
-  const colors = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#06b6d4'];
+  const blockHeight = 22;
+  const colors = ['#f4f4f5', '#e4e4e7', '#d4d4d8', '#a1a1aa', '#71717a', '#52525b'];
 
   const gameStateRef = useRef({
     stack: [] as Block[],
@@ -34,12 +33,11 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Base initial block at bottom
     gameStateRef.current.stack = [
       {
-        x: (canvas.width - 160) / 2,
+        x: (canvas.width - 150) / 2,
         y: canvas.height - blockHeight - 20,
-        width: 160,
+        width: 150,
         color: colors[0],
       },
     ];
@@ -50,15 +48,14 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const state = gameStateRef.current;
 
-      // Draw all blocks in stack
       for (const b of state.stack) {
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.width, blockHeight);
-        ctx.strokeStyle = '#ffffff20';
+        ctx.strokeStyle = '#09090b';
+        ctx.lineWidth = 1;
         ctx.strokeRect(b.x, b.y, b.width, blockHeight);
       }
 
-      // Move and draw current sliding block
       if (!state.gameOver) {
         const topBlockY = state.stack[state.stack.length - 1].y;
         const curY = topBlockY - blockHeight;
@@ -73,8 +70,6 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
         const curColor = colors[state.stack.length % colors.length];
         ctx.fillStyle = curColor;
         ctx.fillRect(state.currentBlock.x, curY, state.currentBlock.width, blockHeight);
-        ctx.strokeStyle = '#ffffff40';
-        ctx.strokeRect(state.currentBlock.x, curY, state.currentBlock.width, blockHeight);
       }
 
       animId = requestAnimationFrame(render);
@@ -92,10 +87,8 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     const topBlock = state.stack[state.stack.length - 1];
     const cur = state.currentBlock;
 
-    // Calculate overhang
     const diff = cur.x - topBlock.x;
     if (Math.abs(diff) >= cur.width) {
-      // Completely missed!
       tg.haptic('error');
       state.gameOver = true;
       setGameOver(true);
@@ -108,7 +101,6 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     let newWidth = cur.width - Math.abs(diff);
     let newX = diff > 0 ? cur.x : topBlock.x;
 
-    // If perfectly aligned within 3px, reward combo
     if (Math.abs(diff) < 4) {
       newWidth = topBlock.width;
       newX = topBlock.x;
@@ -124,7 +116,6 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
       color: colors[state.stack.length % colors.length],
     });
 
-    // If stack height gets high, shift everything down
     if (nextY < 120) {
       for (const b of state.stack) {
         b.y += blockHeight;
@@ -136,7 +127,7 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
 
     state.currentBlock.width = newWidth;
     state.currentBlock.x = 0;
-    state.currentBlock.speed = Math.min(7, 3 + state.score * 0.2);
+    state.currentBlock.speed = Math.min(6.5, 3 + state.score * 0.18);
   };
 
   const restart = () => {
@@ -147,9 +138,9 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     gameStateRef.current = {
       stack: [
         {
-          x: (canvas.width - 160) / 2,
+          x: (canvas.width - 150) / 2,
           y: canvas.height - blockHeight - 20,
-          width: 160,
+          width: 150,
           color: colors[0],
         },
       ],
@@ -162,40 +153,39 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Tower Blocks (Minora)</h2>
-          <span className="text-[10px] text-slate-400">Qavatlar soni: {score}</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Minora (Tower)</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Qavatlar: {score}</span>
         </div>
-        <button onClick={restart} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
         <div
           onClick={dropBlock}
-          className="relative aspect-[3/4] w-full bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col items-center justify-center cursor-pointer"
+          className="relative aspect-[3/4] w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-md flex flex-col items-center justify-center cursor-pointer"
         >
           <canvas ref={canvasRef} width={340} height={380} className="w-full h-full" />
 
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
-              <Trophy size={44} className="text-amber-400 mb-2" />
-              <h3 className="text-2xl font-black mb-1">O‘yin tugadi!</h3>
-              <p className="text-xs text-slate-400 mb-4">Minora balandligi: <span className="text-indigo-400 font-bold">{score} qavat</span></p>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">Balandlik: {score} qavat</p>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   restart();
                 }}
-                className="py-3 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs"
+                className="py-2.5 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Qaytadan boshlash
+                Qayta boshlash
               </button>
             </div>
           )}
@@ -204,9 +194,9 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
         <button
           onClick={dropBlock}
           disabled={gameOver}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black text-sm shadow-lg shadow-indigo-600/25 active:scale-95 transition-all mt-4"
+          className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs active:scale-95 transition-all mt-3"
         >
-          BLOKNI TUSHIRISH (TAP)
+          Blokni tushirish
         </button>
       </div>
     </div>

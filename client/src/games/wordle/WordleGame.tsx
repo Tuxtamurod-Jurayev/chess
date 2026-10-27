@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Trophy, Delete } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Delete } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 
@@ -46,7 +46,7 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (currentGuess === targetWord) {
       setWon(true);
       setGameOver(true);
-      confetti({ particleCount: 100, spread: 80 });
+      confetti({ particleCount: 50, spread: 60 });
       tg.haptic('success');
       if (user) updateCoins(user.coins + 25);
     } else if (newGuesses.length >= 6) {
@@ -66,7 +66,7 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setWon(false);
   };
 
-  const getLetterStatus = (letter: string, index: number, word: string) => {
+  const getLetterStatus = (letter: string, index: number) => {
     if (targetWord[index] === letter) return 'correct';
     if (targetWord.includes(letter)) return 'present';
     return 'absent';
@@ -79,17 +79,17 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none">
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none">
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">Wordle (So‘z topish)</h2>
-          <span className="text-[10px] text-slate-400">5 harfli o‘zbekcha so‘z</span>
+          <h2 className="text-xs font-semibold text-zinc-100">Wordle</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">5 harfli so‘z</span>
         </div>
-        <button onClick={restart} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={restart} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
@@ -108,20 +108,20 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
                   if (guess) {
                     letter = guess[colIdx];
-                    status = getLetterStatus(letter, colIdx, guess);
+                    status = getLetterStatus(letter, colIdx);
                   } else if (isCurrentRow) {
                     letter = currentGuess[colIdx] || '';
                   }
 
-                  let bgClass = 'bg-slate-900/60 border-slate-800 text-white';
-                  if (status === 'correct') bgClass = 'bg-emerald-600 border-emerald-500 text-white';
-                  else if (status === 'present') bgClass = 'bg-amber-500 border-amber-400 text-slate-950';
-                  else if (status === 'absent') bgClass = 'bg-slate-800 border-slate-700 text-slate-400';
+                  let bgClass = 'bg-zinc-900/60 border-zinc-800 text-zinc-300';
+                  if (status === 'correct') bgClass = 'bg-zinc-200 border-zinc-200 text-zinc-950 font-bold';
+                  else if (status === 'present') bgClass = 'bg-zinc-700 border-zinc-600 text-zinc-100';
+                  else if (status === 'absent') bgClass = 'bg-zinc-900 border-zinc-850 text-zinc-600';
 
                   return (
                     <div
                       key={colIdx}
-                      className={`h-12 rounded-xl border-2 flex items-center justify-center font-black text-lg transition-all ${bgClass}`}
+                      className={`h-11 rounded-lg border flex items-center justify-center font-mono font-bold text-sm transition-all ${bgClass}`}
                     >
                       {letter}
                     </div>
@@ -132,7 +132,7 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           })}
         </div>
 
-        {/* Virtual Keyboard */}
+        {/* Minimal Keyboard */}
         <div className="space-y-1.5 mt-4">
           {keyboardRows.map((row, rIdx) => (
             <div key={rIdx} className="flex justify-center gap-1">
@@ -146,13 +146,13 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       else if (k === 'DEL') handleDelete();
                       else handleKeyPress(k);
                     }}
-                    className={`h-11 rounded-lg font-bold text-xs flex items-center justify-center active:scale-95 transition-all ${
+                    className={`h-10 rounded-md font-mono font-medium text-[11px] flex items-center justify-center active:scale-95 transition-colors ${
                       isAction
-                        ? 'px-3 bg-slate-800 hover:bg-slate-700 text-slate-200'
-                        : 'flex-1 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-white'
+                        ? 'px-2.5 bg-zinc-850 text-zinc-300'
+                        : 'flex-1 bg-zinc-900 border border-zinc-800/80 text-zinc-200'
                     }`}
                   >
-                    {k === 'DEL' ? <Delete size={16} /> : k}
+                    {k === 'DEL' ? <Delete size={14} /> : k}
                   </button>
                 );
               })}
@@ -160,23 +160,20 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           ))}
         </div>
 
-        {/* Game Over modal */}
         {gameOver && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl">
-              <Trophy size={44} className="text-amber-400 mx-auto mb-2" />
-              <h3 className="text-2xl font-black mb-1">
-                {won ? 'Topdingiz! 🎉' : 'Afsus, urinishlar tugadi!'}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 text-center shadow-xl">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">
+                {won ? 'Topdingiz' : 'Urinishlar tugadi'}
               </h3>
-              <p className="text-xs text-slate-400 mb-4">
-                Yashiringan so‘z:{' '}
-                <span className="font-bold text-cyan-400 text-sm tracking-widest">{targetWord}</span>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">
+                So‘z: <span className="text-zinc-200 font-semibold">{targetWord}</span>
               </p>
               <button
                 onClick={restart}
-                className="w-full py-3 px-6 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-bold text-xs"
+                className="w-full py-2.5 px-4 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Yana o‘ynash
+                Qayta o‘ynash
               </button>
             </div>
           </div>

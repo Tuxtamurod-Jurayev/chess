@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Trophy, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -8,7 +8,7 @@ import { api } from '../../services/api.js';
 type Board = number[][];
 
 export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { user, showToast } = useAppStore();
+  const { user } = useAppStore();
   const [board, setBoard] = useState<Board>(() => getInitialBoard());
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
@@ -104,14 +104,12 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       setScore(newScore);
       if (newScore > bestScore) setBestScore(newScore);
 
-      // Check win 2048
       if (!won && b.some((row) => row.some((c) => c === 2048))) {
         setWon(true);
-        confetti({ particleCount: 120, spread: 90 });
+        confetti({ particleCount: 60, spread: 60 });
         tg.haptic('success');
       }
 
-      // Check game over
       if (isGameOver(b)) {
         setGameOver(true);
         tg.haptic('error');
@@ -133,7 +131,6 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return true;
   }
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') handleMove('left');
@@ -145,7 +142,6 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleMove]);
 
-  // Touch swipe support
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartRef.current = {
       x: e.touches[0].clientX,
@@ -160,13 +156,9 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     touchStartRef.current = null;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      if (Math.abs(dx) > 30) {
-        handleMove(dx > 0 ? 'right' : 'left');
-      }
+      if (Math.abs(dx) > 30) handleMove(dx > 0 ? 'right' : 'left');
     } else {
-      if (Math.abs(dy) > 30) {
-        handleMove(dy > 0 ? 'down' : 'up');
-      }
+      if (Math.abs(dy) > 30) handleMove(dy > 0 ? 'down' : 'up');
     }
   };
 
@@ -178,69 +170,66 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setWon(false);
   };
 
-  const getTileColor = (val: number) => {
+  const getTileStyle = (val: number) => {
     switch (val) {
-      case 2: return 'bg-amber-100 text-slate-800';
-      case 4: return 'bg-amber-200 text-slate-800';
-      case 8: return 'bg-orange-400 text-white';
-      case 16: return 'bg-orange-500 text-white';
-      case 32: return 'bg-rose-500 text-white';
-      case 64: return 'bg-red-600 text-white';
-      case 128: return 'bg-yellow-400 text-slate-900 shadow-md shadow-yellow-500/30';
-      case 256: return 'bg-yellow-300 text-slate-900 shadow-lg shadow-yellow-400/40';
-      case 512: return 'bg-emerald-400 text-slate-950 font-black';
-      case 1024: return 'bg-cyan-400 text-slate-950 font-black';
-      case 2048: return 'bg-gradient-to-tr from-amber-400 to-yellow-200 text-slate-950 font-black shadow-xl animate-pulse';
-      default: return 'bg-slate-800/60 text-transparent';
+      case 2: return 'bg-zinc-800 text-zinc-300';
+      case 4: return 'bg-zinc-700 text-zinc-100 font-semibold';
+      case 8: return 'bg-zinc-600 text-white font-semibold';
+      case 16: return 'bg-zinc-500 text-white font-bold';
+      case 32: return 'bg-zinc-400 text-zinc-950 font-bold';
+      case 64: return 'bg-zinc-300 text-zinc-950 font-black';
+      case 128: return 'bg-zinc-200 text-zinc-950 font-black';
+      case 256: return 'bg-zinc-100 text-zinc-950 font-black';
+      case 512: return 'bg-white text-zinc-950 font-black shadow-xs';
+      case 1024: return 'bg-amber-400 text-zinc-950 font-black';
+      case 2048: return 'bg-amber-300 text-zinc-950 font-black shadow-sm';
+      default: return 'bg-zinc-900/60 text-transparent';
     }
   };
 
   return (
     <div
-      className="flex flex-col min-h-screen bg-slate-950 text-white safe-top safe-bottom select-none"
+      className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 safe-top safe-bottom select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <ArrowLeft size={20} />
+      <div className="bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between">
+        <button onClick={onBack} className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <ArrowLeft size={18} />
         </button>
         <div className="text-center">
-          <h2 className="text-sm font-bold text-white">2048 Puzzle</h2>
-          <span className="text-[10px] text-slate-400">Barmoq bilan suring</span>
+          <h2 className="text-xs font-semibold text-zinc-100">2048</h2>
+          <span className="text-[10px] text-zinc-500 font-mono">Ball: {score}</span>
         </div>
-        <button onClick={resetGame} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-xl active:scale-95">
-          <RotateCcw size={18} />
+        <button onClick={resetGame} className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white rounded-lg active:scale-95">
+          <RotateCcw size={16} />
         </button>
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
         {/* Score Bar */}
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-3 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Ochko</span>
-            <span className="text-lg font-black text-amber-400 font-mono">{score}</span>
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl p-2.5 text-center">
+            <span className="text-[10px] uppercase font-mono text-zinc-500 block">Ochko</span>
+            <span className="text-sm font-bold font-mono text-zinc-200">{score}</span>
           </div>
-          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-3 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Eng Yuqori</span>
-            <span className="text-lg font-black text-blue-400 font-mono">{bestScore}</span>
+          <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl p-2.5 text-center">
+            <span className="text-[10px] uppercase font-mono text-zinc-500 block">Eng Yuqori</span>
+            <span className="text-sm font-bold font-mono text-zinc-400">{bestScore}</span>
           </div>
         </div>
 
-        {/* 4x4 Grid Container */}
-        <div className="relative aspect-square w-full bg-slate-900 border-2 border-slate-800/80 rounded-3xl p-3 shadow-2xl flex flex-col justify-between">
-          <div className="grid grid-cols-4 grid-rows-4 gap-2.5 w-full h-full">
+        {/* Minimal 4x4 Grid */}
+        <div className="relative aspect-square w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl p-2.5 shadow-md flex flex-col justify-between">
+          <div className="grid grid-cols-4 grid-rows-4 gap-2 w-full h-full">
             {board.map((row, r) =>
               row.map((val, c) => (
                 <div
                   key={`${r}-${c}`}
-                  className={`rounded-2xl flex items-center justify-center font-bold transition-all duration-100 ${
-                    val ? 'scale-100' : 'scale-95'
-                  } ${getTileColor(val)}`}
+                  className={`rounded-xl flex items-center justify-center font-mono transition-transform duration-75 ${getTileStyle(val)}`}
                 >
                   {val !== 0 && (
-                    <span className={`font-mono ${val > 512 ? 'text-lg' : val > 64 ? 'text-xl' : 'text-2xl'}`}>
+                    <span className={`text-base ${val > 512 ? 'text-xs' : val > 64 ? 'text-sm' : 'text-base'}`}>
                       {val}
                     </span>
                   )}
@@ -249,48 +238,46 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             )}
           </div>
 
-          {/* Game Over Overlay */}
           {gameOver && (
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center p-6 text-center animate-fade-in z-30">
-              <Trophy size={48} className="text-amber-400 mb-2" />
-              <h3 className="text-2xl font-black mb-1">O‘yin yakunlandi!</h3>
-              <p className="text-xs text-slate-400 mb-4">To‘plangan ochko: <span className="font-bold text-amber-300 font-mono">{score}</span></p>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin yakunlandi</h3>
+              <p className="text-xs text-zinc-500 mb-4 font-mono">Ball: {score}</p>
               <button
                 onClick={resetGame}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-sm shadow-lg shadow-blue-500/25 active:scale-95"
+                className="py-2 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
               >
-                Qaytadan o‘ynash
+                Qaytadan
               </button>
             </div>
           )}
         </div>
 
-        {/* On-Screen D-Pad / Touch Controls */}
-        <div className="mt-4 flex flex-col items-center">
+        {/* Minimal Arrow D-Pad */}
+        <div className="mt-3 flex flex-col items-center">
           <button
             onClick={() => handleMove('up')}
-            className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-blue-600 active:scale-95 mb-1.5 shadow-sm"
+            className="w-10 h-10 bg-zinc-900/80 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 mb-1 text-zinc-400"
           >
-            <ChevronUp size={24} />
+            <ChevronUp size={20} />
           </button>
-          <div className="flex space-x-6">
+          <div className="flex space-x-4">
             <button
               onClick={() => handleMove('left')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-blue-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900/80 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={20} />
             </button>
             <button
               onClick={() => handleMove('down')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-blue-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900/80 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronDown size={24} />
+              <ChevronDown size={20} />
             </button>
             <button
               onClick={() => handleMove('right')}
-              className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:bg-blue-600 active:scale-95 shadow-sm"
+              className="w-10 h-10 bg-zinc-900/80 border border-zinc-800 rounded-lg flex items-center justify-center active:bg-zinc-800 active:scale-95 text-zinc-400"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={20} />
             </button>
           </div>
         </div>
