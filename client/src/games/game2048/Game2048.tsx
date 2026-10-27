@@ -178,17 +178,17 @@ export const Game2048: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const getTileStyle = (val: number) => {
     switch (val) {
-      case 2: return 'bg-zinc-800 text-zinc-300';
-      case 4: return 'bg-zinc-700 text-zinc-100 font-semibold';
-      case 8: return 'bg-zinc-600 text-white font-semibold';
-      case 16: return 'bg-zinc-500 text-white font-bold';
-      case 32: return 'bg-zinc-400 text-zinc-950 font-bold';
-      case 64: return 'bg-zinc-300 text-zinc-950 font-black';
-      case 128: return 'bg-zinc-200 text-zinc-950 font-black';
-      case 256: return 'bg-zinc-100 text-zinc-950 font-black';
-      case 512: return 'bg-white text-zinc-950 font-black shadow-xs';
-      case 1024: return 'bg-amber-400 text-zinc-950 font-black';
-      case 2048: return 'bg-amber-300 text-zinc-950 font-black shadow-sm';
+      case 2: return 'bg-amber-100 text-slate-900 font-bold shadow-xs';
+      case 4: return 'bg-amber-200 text-slate-900 font-bold shadow-xs';
+      case 8: return 'bg-orange-500 text-white font-bold shadow-xs';
+      case 16: return 'bg-orange-600 text-white font-bold shadow-sm';
+      case 32: return 'bg-rose-500 text-white font-bold shadow-sm';
+      case 64: return 'bg-red-600 text-white font-black shadow-md';
+      case 128: return 'bg-yellow-400 text-slate-950 font-black shadow-md';
+      case 256: return 'bg-yellow-300 text-slate-950 font-black shadow-lg';
+      case 512: return 'bg-emerald-500 text-white font-black shadow-lg';
+      case 1024: return 'bg-cyan-400 text-slate-950 font-black shadow-xl';
+      case 2048: return 'bg-gradient-to-tr from-amber-400 to-yellow-200 text-slate-950 font-black shadow-2xl ring-2 ring-amber-300 animate-pulse';
       default: return 'bg-zinc-900/60 text-transparent';
     }
   };

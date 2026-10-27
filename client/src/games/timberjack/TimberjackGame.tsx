@@ -124,42 +124,51 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
       </div>
 
       <div className="flex-1 max-w-sm mx-auto w-full p-4 flex flex-col justify-between">
-        {/* Minimal progress */}
-        <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden mb-2">
+        {/* Progress Bar */}
+        <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden mb-2">
           <div
-            className="h-full bg-zinc-300 transition-all duration-75"
+            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-75 shadow-xs"
             style={{ width: `${timeLeft}%` }}
           />
         </div>
 
-        {/* Minimalist Tree Stage */}
-        <div className="relative flex-1 bg-zinc-900/30 border border-zinc-800/80 rounded-2xl overflow-hidden flex flex-col justify-end items-center my-2 pb-6">
+        {/* Realistic Tree Stage */}
+        <div className="relative flex-1 bg-gradient-to-b from-zinc-900/80 via-zinc-900 to-amber-950/20 border-2 border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-end items-center my-2 pb-6 shadow-xl">
           {/* Tree Trunk */}
-          <div className="w-14 flex flex-col-reverse items-center relative">
+          <div className="w-16 flex flex-col-reverse items-center relative">
             {tree.map((seg) => (
               <div
                 key={seg.id}
-                className="w-12 h-11 bg-zinc-800 border-x border-zinc-700/80 relative flex items-center justify-center shrink-0"
+                className="w-16 h-12 bg-amber-900 border-x-2 border-amber-950 relative flex items-center justify-center shrink-0 shadow-sm"
               >
-                {/* Branches */}
+                {/* Wood bark grain */}
+                <div className="w-full h-1 bg-amber-800/60" />
+
+                {/* Left Branch */}
                 {seg.branch === 'left' && (
-                  <div className="absolute right-full top-2.5 w-12 h-5 bg-zinc-700 rounded-l-md" />
+                  <div className="absolute right-full top-2 w-14 h-7 bg-amber-950 rounded-l-full border-t border-b border-amber-800 shadow-md">
+                    <div className="w-6 h-6 bg-emerald-600 rounded-full -left-2 -top-1 absolute shadow-xs" />
+                  </div>
                 )}
+                {/* Right Branch */}
                 {seg.branch === 'right' && (
-                  <div className="absolute left-full top-2.5 w-12 h-5 bg-zinc-700 rounded-r-md" />
+                  <div className="absolute left-full top-2 w-14 h-7 bg-amber-950 rounded-r-full border-t border-b border-amber-800 shadow-md">
+                    <div className="w-6 h-6 bg-emerald-600 rounded-full -right-2 -top-1 absolute shadow-xs" />
+                  </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Minimal Woodcutter with Chop Swing */}
+          {/* Realistic Woodcutter with Chop Swing */}
           <div
             className={`absolute bottom-6 transition-all duration-75 ${
-              playerSide === 'left' ? 'left-10' : 'right-10'
+              playerSide === 'left' ? 'left-8' : 'right-8'
             } ${isChopping ? 'animate-chop' : ''}`}
           >
-            <div className="w-9 h-11 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-xs shadow-xs">
-              🪓
+            <div className="w-12 h-14 bg-red-600 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold shadow-lg border border-red-500">
+              <span className="text-base">🧔</span>
+              <span className="text-amber-300 text-xs">🪓</span>
             </div>
           </div>
 
@@ -167,19 +176,21 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
           {flyingWood && (
             <div
               key={flyingWood.id}
-              className={`absolute bottom-10 w-4 h-3 bg-zinc-600 rounded-xs ${
+              className={`absolute bottom-10 w-5 h-4 bg-amber-700 border border-amber-900 rounded-xs shadow-md ${
                 flyingWood.side === 'left' ? 'left-16 animate-fly-left' : 'right-16 animate-fly-right'
               }`}
             />
           )}
 
           {gameOver && (
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
-              <h3 className="text-base font-bold text-zinc-100 mb-1">O‘yin tugadi</h3>
-              <p className="text-xs text-zinc-500 mb-4 font-mono">Natija: {score}</p>
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center animate-fade-in z-30">
+              <h3 className="text-xl font-black text-white mb-1">O‘yin tugadi!</h3>
+              <p className="text-xs text-zinc-400 mb-4 font-mono">
+                Kesilgan yog‘ochlar: <span className="text-amber-400 font-bold">{score}</span>
+              </p>
               <button
                 onClick={restart}
-                className="py-2.5 px-5 rounded-xl bg-zinc-100 text-zinc-950 font-semibold text-xs active:scale-95"
+                className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs shadow-md active:scale-95"
               >
                 Qayta boshlash
               </button>
@@ -188,18 +199,20 @@ export const TimberjackGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
         </div>
 
         {/* Minimal Tap Controls */}
-        <div className="grid grid-cols-2 gap-2 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <button
             onClick={() => chop('left')}
-            className="py-5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-medium text-xs active:scale-95 transition-all"
+            className="py-5 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex flex-col items-center justify-center space-y-1"
           >
-            Chapga
+            <span className="text-xl">👈</span>
+            <span>CHAPGA ZARBA</span>
           </button>
           <button
             onClick={() => chop('right')}
-            className="py-5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-medium text-xs active:scale-95 transition-all"
+            className="py-5 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-850 hover:to-zinc-800 border-2 border-zinc-800 text-white font-bold text-xs active:scale-95 transition-all shadow-md flex flex-col items-center justify-center space-y-1"
           >
-            O‘ngga
+            <span className="text-xl">👉</span>
+            <span>O‘NGGA ZARBA</span>
           </button>
         </div>
       </div>

@@ -167,24 +167,48 @@ export class RoomManager {
     const legalMoves = chess.moves({ verbose: true });
     if (legalMoves.length === 0) return;
 
-    let selectedMove = legalMoves[0];
+    const pieceValues: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
-    if (room.botDifficulty === 'easy') {
-      // Random legal move
-      selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
-    } else {
-      // Prefer capture or check, otherwise random
-      const captures = legalMoves.filter((m) => m.captured);
-      const checks = legalMoves.filter((m) => m.san.includes('+'));
+    // Smart Tactical Bot: evaluates checks, captures, and defended pieces
+    let bestMove = legalMoves[0];
+    let bestScore = -Infinity;
 
-      if (captures.length > 0 && Math.random() > 0.3) {
-        selectedMove = captures[Math.floor(Math.random() * captures.length)];
-      } else if (checks.length > 0 && Math.random() > 0.4) {
-        selectedMove = checks[Math.floor(Math.random() * checks.length)];
-      } else {
-        selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    for (const move of legalMoves) {
+      let score = 0;
+
+      // Prioritize delivering checkmate or check
+      if (move.san.includes('#')) score += 100000;
+      else if (move.san.includes('+')) score += 50;
+
+      // Prioritize high-value captures
+      if (move.captured) {
+        score += (pieceValues[move.captured] || 50) * 10;
+      }
+
+      // Prioritize pawn promotion
+      if (move.promotion) {
+        score += 800;
+      }
+
+      // Center control (d4, e4, d5, e5)
+      if (['d4', 'e4', 'd5', 'e5'].includes(move.to)) {
+        score += 25;
+      }
+
+      // Look ahead 1 step: check if opponent can capture back with lower piece
+      chess.move(move);
+      if (chess.isCheckmate()) {
+        score += 50000;
+      }
+      chess.undo();
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
       }
     }
+
+    const selectedMove = bestMove;
 
     const result = chess.move({
       from: selectedMove.from,

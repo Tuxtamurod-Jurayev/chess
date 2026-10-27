@@ -221,12 +221,12 @@ export const TicTacToeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   }`}
                 >
                   {cell === 'X' && (
-                    <span className={`text-zinc-100 font-light ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
+                    <span className={`text-cyan-400 font-black drop-shadow-md animate-pop ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
                       ✕
                     </span>
                   )}
                   {cell === 'O' && (
-                    <span className={`text-zinc-400 font-light ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
+                    <span className={`text-pink-400 font-black drop-shadow-md animate-pop ${size === 3 ? 'text-4xl' : 'text-xl'}`}>
                       ◯
                     </span>
                   )}

@@ -158,13 +158,18 @@ export const SnakeGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               return (
                 <div key={idx} className="flex items-center justify-center">
                   {isHead && (
-                    <div className="w-[85%] h-[85%] bg-zinc-100 rounded-xs shadow-xs" />
+                    <div className="w-[90%] h-[90%] bg-emerald-400 rounded-md shadow-md border border-emerald-300 flex items-center justify-around px-0.5">
+                      <div className="w-1 h-1 bg-black rounded-full"></div>
+                      <div className="w-1 h-1 bg-black rounded-full"></div>
+                    </div>
                   )}
                   {isBody && (
-                    <div className="w-[80%] h-[80%] bg-zinc-500 rounded-xs" />
+                    <div className="w-[85%] h-[85%] bg-emerald-600 rounded-sm shadow-xs" />
                   )}
                   {isFood && (
-                    <div className="w-[60%] h-[60%] bg-amber-400 rounded-full" />
+                    <div className="w-[75%] h-[75%] bg-rose-500 rounded-full animate-bounce shadow-md shadow-rose-500/50 relative">
+                      <div className="w-1 h-1 bg-emerald-400 rounded-full -top-0.5 right-0.5 absolute" />
+                    </div>
                   )}
                 </div>
               );

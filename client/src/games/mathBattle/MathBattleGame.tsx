@@ -172,22 +172,22 @@ export const MathBattleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => 
           </span>
         </div>
 
-        {/* Minimal Buttons */}
-        <div className="grid grid-cols-2 gap-3 mt-4">
+        {/* Vibrant Action Buttons */}
+        <div className="grid grid-cols-2 gap-3.5 mt-4">
           <button
             onClick={() => handleAnswer(false)}
-            className="py-4 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition-all"
+            className="py-4 rounded-2xl bg-gradient-to-tr from-rose-600 to-red-500 text-white font-black text-sm flex items-center justify-center space-x-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all"
           >
-            <X size={16} />
-            <span>Noto‘g‘ri</span>
+            <X size={18} strokeWidth={2.5} />
+            <span>NOTO‘G‘RI</span>
           </button>
 
           <button
             onClick={() => handleAnswer(true)}
-            className="py-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition-all"
+            className="py-4 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-sm flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all"
           >
-            <Check size={16} />
-            <span>To‘g‘ri</span>
+            <Check size={18} strokeWidth={2.5} />
+            <span>TO‘G‘RI</span>
           </button>
         </div>
 

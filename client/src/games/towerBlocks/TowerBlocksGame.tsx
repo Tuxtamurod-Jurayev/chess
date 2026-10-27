@@ -18,7 +18,16 @@ export const TowerBlocksGame: React.FC<{ onBack: () => void }> = ({ onBack }) =>
   const [gameOver, setGameOver] = useState(false);
 
   const blockHeight = 22;
-  const colors = ['#f4f4f5', '#e4e4e7', '#d4d4d8', '#a1a1aa', '#71717a', '#52525b'];
+  const colors = [
+    '#6366f1', // indigo
+    '#ec4899', // pink
+    '#f59e0b', // amber
+    '#10b981', // emerald
+    '#06b6d4', // cyan
+    '#8b5cf6', // purple
+    '#f43f5e', // rose
+    '#3b82f6', // blue
+  ];
 
   const gameStateRef = useRef({
     stack: [] as Block[],

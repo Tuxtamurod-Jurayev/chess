@@ -3,6 +3,7 @@ import { Chess, type Square } from 'chess.js';
 import confetti from 'canvas-confetti';
 import { ArrowLeft, RotateCcw, Flag } from 'lucide-react';
 import { ChessPieceIcon } from './ChessPieces.js';
+import { findBestChessMove } from './chessAI.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { tg } from '../../services/telegram.js';
 import { socket } from '../../services/socket.js';
@@ -76,32 +77,17 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   }, [fen, gameMode, gameStarted, gameOverResult]);
 
   const makeBotMove = () => {
-    const moves = chess.moves({ verbose: true });
-    if (moves.length === 0) return;
-
-    let chosenMove = moves[0];
-    if (botLevel === 'easy') {
-      chosenMove = moves[Math.floor(Math.random() * moves.length)];
-    } else {
-      const captures = moves.filter((m) => m.captured);
-      const checks = moves.filter((m) => m.san.includes('+'));
-
-      if (captures.length > 0 && Math.random() > 0.3) {
-        chosenMove = captures[Math.floor(Math.random() * captures.length)];
-      } else if (checks.length > 0 && Math.random() > 0.4) {
-        chosenMove = checks[Math.floor(Math.random() * checks.length)];
-      } else {
-        chosenMove = moves[Math.floor(Math.random() * moves.length)];
-      }
-    }
+    // Competitive tactical AI engine (Minimax + Piece-Square Tables)
+    const bestMove = findBestChessMove(chess, botLevel);
+    if (!bestMove) return;
 
     chess.move({
-      from: chosenMove.from,
-      to: chosenMove.to,
-      promotion: chosenMove.promotion || 'q',
+      from: bestMove.from,
+      to: bestMove.to,
+      promotion: bestMove.promotion || 'q',
     });
 
-    tg.haptic('light');
+    tg.haptic(bestMove.captured ? 'heavy' : 'light');
     setFen(chess.fen());
     setActiveTimerSide('w');
     checkGameState();
@@ -310,21 +296,26 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
         /* Active Board */
         <div className="flex-1 flex flex-col justify-between p-3.5 max-w-sm mx-auto w-full">
           {/* Top (Black) */}
-          <div className="flex items-center justify-between py-1.5 px-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-mono">
-                {gameMode === 'bot' ? 'AI' : 'B'}
+          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs text-zinc-300 font-bold font-mono">
+                {gameMode === 'bot' ? '🤖' : '♟'}
               </div>
-              <span className="text-xs font-medium text-zinc-300">
-                {gameMode === 'bot' ? 'Bot' : 'Qoralar'}
-              </span>
+              <div>
+                <span className="text-xs font-bold text-white block">
+                  {gameMode === 'bot' ? `AI Master (${botLevel.toUpperCase()})` : 'Qoralar (Black)'}
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono">
+                  {gameMode === 'bot' ? (botLevel === 'hard' ? '1850 ELO' : botLevel === 'medium' ? '1500 ELO' : '1250 ELO') : '1400 ELO'}
+                </span>
+              </div>
             </div>
 
             <div
-              className={`font-mono text-xs px-2 py-0.5 rounded-md border ${
+              className={`font-mono text-sm px-2.5 py-1 rounded-lg border transition-all ${
                 activeTimerSide === 'b'
-                  ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-100'
-                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs animate-pulse-subtle'
+                  : 'bg-zinc-800/80 text-zinc-500 border-zinc-700'
               }`}
             >
               {formatTimer(blackTimer)}
@@ -332,7 +323,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
 
           {/* Minimal 8x8 Chessboard */}
-          <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-zinc-800 shadow-md">
+          <div className="relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-zinc-800 shadow-xl my-2">
             <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
               {ranks.map((rank, rIdx) =>
                 files.map((file, fIdx) => {
@@ -350,19 +341,27 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
                       key={square}
                       onClick={() => handleSquareClick(square)}
                       className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${
-                        isDark ? 'bg-[#27272a]' : 'bg-[#3f3f46]'
-                      } ${isLastMove ? '!bg-zinc-600/60' : ''} ${isSelected ? '!bg-zinc-500' : ''} ${
-                        isCheck ? '!bg-rose-900/70 animate-pulse' : ''
+                        isDark ? 'bg-[#739552]' : 'bg-[#ebecd0]'
+                      } ${isLastMove ? '!bg-[#baca44]' : ''} ${isSelected ? '!bg-[#f6f669]' : ''} ${
+                        isCheck ? '!bg-rose-500/80 animate-pulse' : ''
                       }`}
                     >
                       {/* Subdued Rank/File labels */}
                       {fIdx === 0 && (
-                        <span className="absolute top-0.5 left-1 text-[8px] font-mono opacity-30 pointer-events-none select-none">
+                        <span
+                          className={`absolute top-0.5 left-1 text-[8px] font-mono font-bold select-none pointer-events-none ${
+                            isDark ? 'text-[#ebecd0]' : 'text-[#739552]'
+                          }`}
+                        >
                           {rank}
                         </span>
                       )}
                       {rIdx === 7 && (
-                        <span className="absolute bottom-0.5 right-1 text-[8px] font-mono opacity-30 pointer-events-none select-none">
+                        <span
+                          className={`absolute bottom-0.5 right-1 text-[8px] font-mono font-bold select-none pointer-events-none ${
+                            isDark ? 'text-[#ebecd0]' : 'text-[#739552]'
+                          }`}
+                        >
                           {file}
                         </span>
                       )}
@@ -398,21 +397,26 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
 
           {/* Bottom (White) */}
-          <div className="flex items-center justify-between py-1.5 px-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-md bg-zinc-200 border border-white flex items-center justify-center text-[10px] text-zinc-950 font-bold font-mono">
-                W
+          <div className="flex items-center justify-between py-2 px-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-xs text-blue-300 font-bold font-mono">
+                {user?.firstName ? user.firstName[0].toUpperCase() : 'W'}
               </div>
-              <span className="text-xs font-medium text-zinc-100">
-                {user?.firstName || 'Siz'} (Oqlar)
-              </span>
+              <div>
+                <span className="text-xs font-bold text-white block">
+                  {user?.firstName || 'Siz'} (Oqlar)
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono">
+                  {user?.eloRating?.chess || 1200} ELO
+                </span>
+              </div>
             </div>
 
             <div
-              className={`font-mono text-xs px-2 py-0.5 rounded-md border ${
+              className={`font-mono text-sm px-2.5 py-1 rounded-lg border transition-all ${
                 activeTimerSide === 'w'
-                  ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-100'
-                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/50 shadow-xs animate-pulse-subtle'
+                  : 'bg-zinc-800/80 text-zinc-500 border-zinc-700'
               }`}
             >
               {formatTimer(whiteTimer)}

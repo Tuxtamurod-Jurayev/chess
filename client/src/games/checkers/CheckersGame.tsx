@@ -228,18 +228,18 @@ export const CheckersGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     key={`${r}-${c}`}
                     onClick={() => handleSquareClick(r, c)}
                     className={`relative flex items-center justify-center cursor-pointer transition-colors ${
-                      isDark ? 'bg-[#27272a]' : 'bg-[#18181b]'
-                    } ${isSelected ? '!bg-zinc-600' : ''}`}
+                      isDark ? 'bg-[#7c2d12]' : 'bg-[#fef3c7]'
+                    } ${isSelected ? '!bg-amber-400' : ''}`}
                   >
                     {cell && (
                       <div
-                        className={`w-3/4 h-3/4 rounded-full flex items-center justify-center shadow-xs transition-transform ${
+                        className={`w-3/4 h-3/4 rounded-full flex items-center justify-center shadow-lg transition-transform border-2 ${
                           cell.side === 'white'
-                            ? 'bg-zinc-100 border border-white text-zinc-900'
-                            : 'bg-zinc-800 border border-zinc-600 text-zinc-300'
-                        } ${isSelected ? 'scale-105' : ''}`}
+                            ? 'bg-gradient-to-tr from-slate-200 to-white border-slate-300 text-slate-800'
+                            : 'bg-gradient-to-tr from-zinc-950 to-zinc-800 border-zinc-700 text-amber-400'
+                        } ${isSelected ? 'scale-110 drop-shadow-md' : 'scale-100'}`}
                       >
-                        {cell.isKing && <Crown size={12} className="stroke-[2.5]" />}
+                        {cell.isKing && <Crown size={14} className="stroke-[2.5] fill-current animate-pulse" />}
                       </div>
                     )}
                   </div>

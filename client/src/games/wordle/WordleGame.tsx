@@ -114,9 +114,9 @@ export const WordleGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   }
 
                   let bgClass = 'bg-zinc-900/60 border-zinc-800 text-zinc-300';
-                  if (status === 'correct') bgClass = 'bg-zinc-200 border-zinc-200 text-zinc-950 font-bold';
-                  else if (status === 'present') bgClass = 'bg-zinc-700 border-zinc-600 text-zinc-100';
-                  else if (status === 'absent') bgClass = 'bg-zinc-900 border-zinc-850 text-zinc-600';
+                  if (status === 'correct') bgClass = 'bg-emerald-600 border-emerald-500 text-white font-black shadow-sm';
+                  else if (status === 'present') bgClass = 'bg-amber-500 border-amber-400 text-white font-black shadow-sm';
+                  else if (status === 'absent') bgClass = 'bg-zinc-800/80 border-zinc-700/60 text-zinc-400';
 
                   const isFilled = isCurrentRow && letter;
 
