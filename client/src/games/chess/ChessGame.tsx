@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Chess, type Square } from 'chess.js';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, RotateCcw, Clock, Swords, Shuffle, Loader2, Flag } from 'lucide-react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { ChessPieceIcon } from './ChessPieces.js';
 import { findBestChessMove } from './chessAI.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -24,12 +24,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
   const [botLevel, setBotLevel] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [gameStarted, setGameStarted] = useState(false);
 
-  // 1v1 Online Challenge States
-  const [showPvpSetup, setShowPvpSetup] = useState(false);
-  const [selectedMinutes, setSelectedMinutes] = useState<3 | 5 | 10>(5);
-  const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('random');
-  const [isWaitingForOpponent, setIsWaitingForOpponent] = useState(false);
-  const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null);
+  // 1v1 PvP state
   const [pvpRoom, setPvpRoom] = useState<GameRoom | null>(null);
   const [myColor, setMyColor] = useState<'w' | 'b'>('w');
 
@@ -51,18 +46,9 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
 
   // Socket listeners for 1v1 PvP
   useEffect(() => {
-    const handleChallengeCreated = (data: { room: GameRoom; hostColor: 'w' | 'b' }) => {
-      setIsWaitingForOpponent(true);
-      setPendingChallengeId(data.room.id);
-      setPvpRoom(data.room);
-      setMyColor(data.hostColor);
-    };
-
     const handleMatchFound = (data: { room: GameRoom; hostColor: 'w' | 'b' }) => {
       tg.haptic('success');
       confetti({ particleCount: 40, spread: 60 });
-      setIsWaitingForOpponent(false);
-      setShowPvpSetup(false);
       setPvpRoom(data.room);
       setGameMode('pvp');
 
@@ -89,14 +75,14 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
       timerBlack: number;
     }) => {
       try {
-        if (data.gameState.fen) {
+        if (data.gameState?.fen) {
           chess.load(data.gameState.fen);
           setFen(chess.fen());
           tg.haptic('light');
         }
         if (typeof data.timerWhite === 'number') setWhiteTimer(data.timerWhite);
         if (typeof data.timerBlack === 'number') setBlackTimer(data.timerBlack);
-        if (data.gameState.turn) setActiveTimerSide(data.gameState.turn);
+        if (data.gameState?.turn) setActiveTimerSide(data.gameState.turn);
 
         if (chess.isGameOver()) {
           checkGameState();
@@ -106,21 +92,12 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
       }
     };
 
-    const handleChallengeCancelled = () => {
-      setIsWaitingForOpponent(false);
-      setPendingChallengeId(null);
-    };
-
-    socket.on('challenge_created', handleChallengeCreated);
     socket.on('match_found', handleMatchFound);
     socket.on('game_updated', handleGameUpdated);
-    socket.on('challenge_cancelled', handleChallengeCancelled);
 
     return () => {
-      socket.off('challenge_created', handleChallengeCreated);
       socket.off('match_found', handleMatchFound);
       socket.off('game_updated', handleGameUpdated);
-      socket.off('challenge_cancelled', handleChallengeCancelled);
     };
   }, [user, chess]);
 
@@ -291,28 +268,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
     tg.haptic('medium');
   };
 
-  const handleSendChallenge = () => {
-    if (!user) return;
-    tg.haptic('medium');
-    socket.emit('create_challenge', {
-      userId: user.id,
-      gameId: 'chess',
-      timeMinutes: selectedMinutes,
-      color: selectedColor,
-    });
-  };
 
-  const handleCancelChallenge = () => {
-    if (pendingChallengeId && user) {
-      socket.emit('cancel_challenge', {
-        challengeId: pendingChallengeId,
-        userId: user.id,
-      });
-    }
-    setIsWaitingForOpponent(false);
-    setPendingChallengeId(null);
-    setShowPvpSetup(false);
-  };
 
   const formatTimer = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -367,28 +323,6 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
           </div>
 
           <div className="space-y-2">
-            {/* 1v1 Onlayn Tugmasi */}
-            <button
-              onClick={() => {
-                tg.haptic('medium');
-                setShowPvpSetup(true);
-              }}
-              className="w-full p-3.5 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border border-blue-500/50 hover:border-blue-400 font-medium text-left flex items-center justify-between active:scale-[0.99] transition-all shadow-md group"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
-                  <Swords size={20} />
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-white">1v1 Onlayn</span>
-                  <span className="text-[10px] text-blue-300">Vaqt va rang tanlab taklif yuborish</span>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
-                PvP
-              </span>
-            </button>
-
             {/* Botga qarshi */}
             <button
               onClick={() => {
@@ -593,125 +527,6 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onBack }) => {
             >
               {formatTimer(isFlipped ? blackTimer : whiteTimer)}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 1v1 Onlayn Setup Sheet (Vaqt va Rang tanlash) */}
-      {showPvpSetup && !isWaitingForOpponent && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 animate-fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Swords size={16} className="text-blue-400" /> 1v1 Onlayn Shaxmat
-              </h3>
-              <button
-                onClick={() => setShowPvpSetup(false)}
-                className="p-1 text-zinc-400 hover:text-white rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Vaqt tanlash */}
-            <div>
-              <label className="text-[11px] font-bold text-zinc-400 block mb-2 font-mono uppercase tracking-wider flex items-center gap-1">
-                <Clock size={12} /> Partiya Vaqti
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { m: 3, label: '3 daq', sub: 'Blitz ⚡' },
-                  { m: 5, label: '5 daq', sub: 'Rapid ⏱️' },
-                  { m: 10, label: '10 daq', sub: 'Klassik ⏳' },
-                ].map((item) => (
-                  <button
-                    key={item.m}
-                    onClick={() => {
-                      tg.haptic('light');
-                      setSelectedMinutes(item.m as any);
-                    }}
-                    className={`py-2.5 px-2 rounded-xl text-center border transition-all ${
-                      selectedMinutes === item.m
-                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-md scale-102'
-                        : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-300 hover:border-zinc-600'
-                    }`}
-                  >
-                    <span className="block text-xs font-bold font-mono">{item.label}</span>
-                    <span className="text-[9px] opacity-80">{item.sub}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Rang tanlash */}
-            <div>
-              <label className="text-[11px] font-bold text-zinc-400 block mb-2 font-mono uppercase tracking-wider flex items-center gap-1">
-                <Shuffle size={12} /> Rangingizni Tanlang
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { c: 'w', label: 'Oqlar', icon: '⚪' },
-                  { c: 'random', label: 'Tasodifiy', icon: '🎲' },
-                  { c: 'b', label: 'Qoralar', icon: '⚫' },
-                ].map((item) => (
-                  <button
-                    key={item.c}
-                    onClick={() => {
-                      tg.haptic('light');
-                      setSelectedColor(item.c as any);
-                    }}
-                    className={`py-2.5 px-2 rounded-xl text-center border transition-all ${
-                      selectedColor === item.c
-                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-md scale-102'
-                        : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-300 hover:border-zinc-600'
-                    }`}
-                  >
-                    <span className="text-base block mb-0.5">{item.icon}</span>
-                    <span className="text-[11px] font-medium">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Yuborish Button */}
-            <div className="pt-2">
-              <button
-                onClick={handleSendChallenge}
-                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-2xl shadow-lg active:scale-98 transition-all flex items-center justify-center space-x-2"
-              >
-                <span>🚀 Taklif yuborish (Raqib chaqirish)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Raqib Kutilmoqda Overlay */}
-      {isWaitingForOpponent && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 text-center animate-fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
-            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-              <Loader2 size={40} className="text-blue-500 animate-spin" />
-              <Swords size={20} className="text-white absolute" />
-            </div>
-
-            <div>
-              <h3 className="text-base font-bold text-white mb-1">Raqib kutilmoqda...</h3>
-              <p className="text-xs text-blue-300 font-mono">
-                {selectedMinutes} daqiqa • {selectedColor === 'w' ? 'Oqlar' : selectedColor === 'b' ? 'Qoralar' : 'Tasodifiy rang'}
-              </p>
-            </div>
-
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Barcha foydalanuvchilarga bildirishnoma yuborildi. Birinchi bo‘lib "Qo‘shilish" bosgan o‘yinchi bilan partiya darhol boshlanadi!
-            </p>
-
-            <button
-              onClick={handleCancelChallenge}
-              className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition-all active:scale-95"
-            >
-              Bekor qilish
-            </button>
           </div>
         </div>
       )}

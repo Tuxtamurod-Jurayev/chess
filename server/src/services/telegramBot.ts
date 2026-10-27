@@ -1,13 +1,13 @@
 import https from 'node:https';
-import dns from 'node:dns/promises';
+import dns from 'node:dns';
 
 export interface TelegramBotConfig {
   token: string;
   webappUrl: string;
 }
 
-const dnsResolver = new dns.Resolver();
-dnsResolver.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+const fallbackResolver = new dns.promises.Resolver();
+fallbackResolver.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
 
 export class TelegramBotService {
   private token: string;
@@ -164,8 +164,14 @@ export class TelegramBotService {
             await this.handleUpdate(update);
           }
         } else if (!res.ok) {
-          console.warn('⚠️ [TelegramBot] getUpdates javobi:', res.description);
-          await new Promise((r) => setTimeout(r, 3000));
+          const desc = res.description || '';
+          if (desc.includes('Conflict') || desc.includes('409')) {
+            console.warn('⚠️ [TelegramBot] Boshqa nusxa (instance) faol. 8 soniya kutilmoqda...');
+            await new Promise((r) => setTimeout(r, 8000));
+          } else {
+            console.warn('⚠️ [TelegramBot] getUpdates javobi:', desc);
+            await new Promise((r) => setTimeout(r, 3000));
+          }
         }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -326,17 +332,22 @@ export class TelegramBotService {
         },
         lookup: (hostname, opts, cb) => {
           const callback = typeof opts === 'function' ? opts : cb;
-          const isAll = typeof opts === 'object' && opts && (opts as any).all;
-          dnsResolver
-            .resolve4(hostname)
-            .then((addrs) => {
-              if (isAll) {
-                callback(null, addrs.map((a) => ({ address: a, family: 4 })) as any);
-              } else {
-                callback(null, addrs[0] as any, 4);
-              }
-            })
-            .catch((err) => callback(err, '', 4));
+          dns.lookup(hostname, opts as any, (err, address, family) => {
+            if (!err && address) {
+              return callback(null, address as any, family);
+            }
+            const isAll = typeof opts === 'object' && opts && (opts as any).all;
+            fallbackResolver
+              .resolve4(hostname)
+              .then((addrs) => {
+                if (isAll) {
+                  callback(null, addrs.map((a) => ({ address: a, family: 4 })) as any);
+                } else {
+                  callback(null, addrs[0] as any, 4);
+                }
+              })
+              .catch((fallbackErr) => callback(fallbackErr, '', 4));
+          });
         },
       };
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer } from 'node:http';
+import https from 'node:https';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -242,4 +243,28 @@ server.listen(PORT, async () => {
   console.log(`🚀 Telegram Gaming Portal Backend running on http://localhost:${PORT}`);
   // Start Telegram Bot
   await telegramBot.start();
+
+  // Self-ping to prevent Render Free Tier from sleeping (spins down after 15m inactivity)
+  const pingTarget = process.env.RENDER_EXTERNAL_URL || process.env.WEBAPP_URL;
+  if (pingTarget && pingTarget.startsWith('https://')) {
+    const healthUrl = `${pingTarget.replace(/\/$/, '')}/health`;
+    console.log(`⏱️ [Keep-Alive] Render 24/7 self-ping yoqildi: ${healthUrl} (har 8 daqiqada)`);
+    setInterval(() => {
+      https
+        .get(healthUrl, (res) => {
+          console.log(`💓 [Keep-Alive] Ping muvaffaqiyatli: ${res.statusCode}`);
+        })
+        .on('error', (err) => {
+          console.warn(`⚠️ [Keep-Alive] Ping xatosi:`, err.message);
+        });
+    }, 8 * 60 * 1000);
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ [Process] Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ [Process] Uncaught Exception:', err);
 });
