@@ -46,8 +46,8 @@ const telegramBot = new TelegramBotService({
 });
 
 const roomManager = new RoomManager(io);
-const matchmakingQueue = new MatchmakingQueue(io, roomManager, (user, gameId) => {
-  telegramBot.broadcastGameInvite(user.firstName, gameId, user.telegramId);
+const matchmakingQueue = new MatchmakingQueue(io, roomManager, (_user, _gameId) => {
+  // Avtomatik xabarnoma/reklama yubormaslik uchun broadcast o'chirildi
 });
 
 // REST Endpoints
